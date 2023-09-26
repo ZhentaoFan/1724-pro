@@ -7,7 +7,7 @@ from keras.layers import Input,  Multiply, Add
 from keras.models import Model
 from keras.optimizers import RMSprop
 
-from keras.layers.merge import concatenate
+from keras.layers import concatenate
 
 
 class LitAgent(NetworkAgent): 

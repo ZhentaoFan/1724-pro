@@ -5,7 +5,7 @@ from keras.layers import Input, Dense, Conv2D, Flatten, BatchNormalization, Acti
 from keras.models import Model, model_from_json, load_model
 from keras.optimizers import RMSprop
 from keras.callbacks import EarlyStopping, TensorBoard
-from keras.layers.merge import concatenate, add
+from keras.layers import concatenate, add
 import random
 import os
 import pickle

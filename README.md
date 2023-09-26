@@ -1,4 +1,4 @@
-Dependency of libraries fixed. For the original code, please refer to the repo [MPLight](https://github.com/Chacha-Chen/MPLight) and [CityFlow](https://github.com/cityflow-project/CityFlow)
+Dependency of libraries fixed. For the original code, please refer to the repo [MPLight](https://github.com/Chacha-Chen/MPLight), [CoLight](https://github.com/wingsweihua/colight) and [CityFlow](https://github.com/cityflow-project/CityFlow)
 
 In CityFlow, 
 

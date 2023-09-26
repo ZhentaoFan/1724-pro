@@ -12,12 +12,12 @@ import keras
 from keras import backend as K
 from keras.optimizers import Adam, RMSprop
 import tensorflow as tf
-from keras.layers import Dense, Dropout, Conv2D, Input, Lambda, Flatten, TimeDistributed, merge
+from keras.layers import Dense, Dropout, Conv2D, Input, Lambda, Flatten, TimeDistributed
 from keras.layers import Add, Reshape, MaxPooling2D, Concatenate, Embedding, RepeatVector
 from keras.models import Model, model_from_json, load_model
-from keras.layers.core import Activation
-from keras.utils import np_utils,to_categorical
-from keras.engine.topology import Layer
+from keras.layers import Activation
+from keras.utils import to_categorical
+from keras.layers import Layer
 from keras.callbacks import EarlyStopping, TensorBoard
 
 # SEED=6666
