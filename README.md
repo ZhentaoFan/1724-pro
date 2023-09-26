@@ -8,4 +8,4 @@ pip install .
 
 Python version that is being used is 3.10.
 
-Then ihstall the default version of keras and tensorflow when there is an error.
+Then install the default version of keras and tensorflow when there is an error.
