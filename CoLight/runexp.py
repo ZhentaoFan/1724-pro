@@ -15,7 +15,7 @@ multi_process = True
 TOP_K_ADJACENCY=-1
 TOP_K_ADJACENCY_LANE=-1
 PRETRAIN=False
-NUM_ROUNDS=5
+NUM_ROUNDS=100
 EARLY_STOP=False 
 NEIGHBOR=False
 SAVEREPLAY=False
@@ -40,7 +40,7 @@ def parse_args():
     global TOP_K_ADJACENCY_LANE
     TOP_K_ADJACENCY_LANE=5
     global NUM_ROUNDS
-    NUM_ROUNDS=10
+    NUM_ROUNDS=100
     global EARLY_STOP
     EARLY_STOP=False
     global NEIGHBOR
@@ -379,6 +379,9 @@ def main(memo, env, road_net, gui, volume, suffix, mod, cnt, gen, r_all, workers
             template = "template_lsr"
         else:
             raise ValueError
+        
+        with open('log-info.txt', 'w') as file:
+            file.write(template)
 
         if dic_traffic_env_conf_extra['NEIGHBOR']:
             list_feature = dic_traffic_env_conf_extra["LIST_STATE_FEATURE"].copy()
