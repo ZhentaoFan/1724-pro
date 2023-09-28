@@ -12,7 +12,10 @@ def compute_time_difference_for_file(file_path):
     filtered_df = df.dropna(subset=['enter_time', 'leave_time'])
     
     # Calculate the difference between 'leave_time' and 'enter_time' for each row
-    time_difference = (filtered_df['leave_time'] - filtered_df['enter_time']).sum()
+    # time_difference = (filtered_df['leave_time'] - filtered_df['enter_time']).sum()
+    
+    first_200_rows = filtered_df.iloc[:200]
+    time_difference = (first_200_rows['leave_time'] - first_200_rows['enter_time']).sum()
     
     return time_difference
 
