@@ -27,5 +27,5 @@ for j in range(100):
     # Sum time differences across all files
     total_time_difference_all_files = sum(compute_time_difference_for_file(file_name) for file_name in file_names)
 
-    print(total_time_difference_all_files)
+    print(total_time_difference_all_files, j)
 
