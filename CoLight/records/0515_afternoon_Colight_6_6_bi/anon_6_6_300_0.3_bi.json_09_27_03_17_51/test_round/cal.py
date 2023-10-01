@@ -15,7 +15,7 @@ def compute_time_difference_for_file(file_path):
     # time_difference = (filtered_df['leave_time'] - filtered_df['enter_time']).sum()
     
     first_200_rows = filtered_df.iloc[:200]
-    time_difference = (first_200_rows['leave_time'] - first_200_rows['enter_time']).sum()
+    time_difference = first_200_rows['leave_time'] - first_200_rows['enter_time'] 
     
     return time_difference
 
@@ -25,7 +25,19 @@ for j in range(100):
     file_names = [f'./round_{j}/vehicle_inter_{i}.csv' for i in range(36)]
 
     # Sum time differences across all files
-    total_time_difference_all_files = sum(compute_time_difference_for_file(file_name) for file_name in file_names)
+    # total_time_difference_all_files = sum(sum(compute_time_difference_for_file(file_name)) for file_name in file_names)
+    # total_standard_deviation = 
+    # print(total_time_difference_all_files, j)
+    
+    all_time_differences = []
 
-    print(total_time_difference_all_files, j)
+    # Gather all time differences
+    for file_name in file_names:
+        all_time_differences.extend(compute_time_difference_for_file(file_name))
+
+    # Compute total time difference and standard deviation across all files
+    total_time_difference_all_files = sum(all_time_differences)
+    total_standard_deviation = pd.Series(all_time_differences).std()
+
+    print(total_time_difference_all_files, total_standard_deviation, j)
 
