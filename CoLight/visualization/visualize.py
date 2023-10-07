@@ -3,19 +3,19 @@ import matplotlib.pyplot as plt
 import argparse
 
 
-# with open("../data/Hangzhou/4_4/roadnet_4_4.json", 'r') as road_file:
-#     road_data = json.load(road_file)
-
-# # Load the newly uploaded data
-# with open("../data/Hangzhou/4_4/anon_4_4_hangzhou_real.json", "r") as file:
-#     new_volume_data = json.load(file)
-    
-with open("../data/Jinan/3_4/roadnet_3_4.json", 'r') as road_file:
+with open("../data/Hangzhou/4_4/roadnet_4_4.json", 'r') as road_file:
     road_data = json.load(road_file)
 
 # Load the newly uploaded data
-with open("../data/Jinan/3_4/anon_3_4_jinan_real.json", "r") as file:
+with open("../data/Hangzhou/4_4/anon_4_4_hangzhou_real.json", "r") as file:
     new_volume_data = json.load(file)
+    
+# with open("../data/Jinan/3_4/roadnet_3_4.json", 'r') as road_file:
+#     road_data = json.load(road_file)
+
+# # Load the newly uploaded data
+# with open("../data/Jinan/3_4/anon_3_4_jinan_real.json", "r") as file:
+#     new_volume_data = json.load(file)
     
 # Calculate the traffic volume on each road segment
 
