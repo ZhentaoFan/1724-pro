@@ -4,3 +4,4 @@ __pycache__/*
 console.txt
 model/*
 temp.tensorboard/*
+errors/*
