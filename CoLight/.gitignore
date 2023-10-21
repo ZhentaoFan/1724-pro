@@ -5,3 +5,4 @@ console.txt
 model/*
 temp.tensorboard/*
 errors/*
+baseline/__pycache__/*
