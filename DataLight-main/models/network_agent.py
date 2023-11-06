@@ -82,19 +82,19 @@ class NetworkAgent(Agent):
     def load_network(self, file_name, file_path=None):
         if file_path is None:
             file_path = self.dic_path["PATH_TO_MODEL"]
-        self.q_network = load_model(os.path.join(file_path, "%s.h5" % file_name))
+        self.q_network = load_model(os.path.join(file_path, "%s.h5" % file_name), safe_mode=False)
         print("succeed in loading model %s" % file_name)
 
     def load_network_transfer(self, file_name, file_path=None):
         if file_path is None:
             file_path = self.dic_path["PATH_TO_TRANSFER_MODEL"]
-        self.q_network = load_model(os.path.join(file_path, "%s.h5" % file_name))
+        self.q_network = load_model(os.path.join(file_path, "%s.h5" % file_name), safe_mode=False)
         print("succeed in loading model %s" % file_name)
 
     def load_network_bar(self, file_name, file_path=None):
         if file_path is None:
             file_path = self.dic_path["PATH_TO_MODEL"]
-        self.q_network_bar = load_model(os.path.join(file_path, "%s.h5" % file_name))
+        self.q_network_bar = load_model(os.path.join(file_path, "%s.h5" % file_name), safe_mode=False)
         print("succeed in loading model %s" % file_name)
 
     def save_network(self, file_name):
