@@ -246,14 +246,14 @@ class GeneralAgent(NetworkAgent):
                         tmp_target[i, batch_a[i]] = batch_r[i] / self.dic_agent_conf["NORMAL_FACTOR"] + \
                                                     self.dic_agent_conf["GAMMA"] * \
                                                     np.max(tmp_next_q[i, :])
-                    base_loss = tf.reduce_mean(loss_fn(tmp_target, tmp_cur_q))
+                    base_loss = tf.reduce_mean(loss_fn(tmp_target, tmp_cur_q)) #?
                     
                     # tmp_loss = base_loss 
                     
                     # calculate CQL loss
                     replay_action_one_hot = tf.one_hot(batch_a, 4, 1., 0., name='action_one_hot')
                     replay_chosen_q = tf.reduce_sum(tmp_cur_q * replay_action_one_hot)
-                    dataset_expec = tf.reduce_mean(replay_chosen_q)
+                    dataset_expec = tf.reduce_mean(replay_chosen_q) 
                     negative_sampling = tf.reduce_mean(tf.reduce_logsumexp(tmp_cur_q, 1))
                     min_q_loss = (negative_sampling - dataset_expec)
                     min_q_loss = min_q_loss * self.min_q_weight
@@ -262,7 +262,7 @@ class GeneralAgent(NetworkAgent):
                     
                     grads = tape.gradient(tmp_loss, self.q_network.trainable_weights)
                     optimizer.apply_gradients(zip(grads, self.q_network.trainable_weights))
-                print("===== Epoch {} | Batch {} / {} | Loss {}".format(epoch, ba, num_batch, tmp_loss))
+                # print("===== Epoch {} | Batch {} / {} | Loss {}".format(epoch, ba, num_batch, tmp_loss))
 
 
 

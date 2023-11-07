@@ -15,8 +15,8 @@ def parse_args():
     parser.add_argument("-multi_process", action="store_true", default=True)
     parser.add_argument("-workers",    type=int,            default=4)
 
-    parser.add_argument("-hangzhou",    action="store_true", default=False)
-    parser.add_argument("-jinan",       action="store_true", default=True)
+    parser.add_argument("-hangzhou",    action="store_true", default=True)
+    parser.add_argument("-jinan",       action="store_true", default=False)
     return parser.parse_args()
 
 

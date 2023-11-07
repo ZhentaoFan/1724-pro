@@ -20,18 +20,18 @@ multi_process = True
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-memo",       type=str,               default='benchmark_0216_t_13')
-    parser.add_argument("-old_memo",   type=str,               default='benchmark_0216_13')
+    parser.add_argument("-memo",       type=str,               default='benchmark_1001')
+    parser.add_argument("-old_memo",   type=str,               default='benchmark_1001')
     parser.add_argument("-model",       type=str,               default="General") 
-    parser.add_argument("-old_dir",    type=str,  default='anon_3_4_jinan_real3.json_02_16_22_14_17')
-    parser.add_argument("-old_round",  type=str,                default="round_75")
+    parser.add_argument("-old_dir",    type=str,  default='anon_4_4_hangzhou_real.json_11_06_17_37_16')
+    parser.add_argument("-old_round",  type=str,                default="round_2")
 
     parser.add_argument("-workers",     type=int,                default=3)
     
     parser.add_argument("-hangzhou",    action="store_true",     default=1)
-    parser.add_argument("-jinan",       action="store_true",     default=1)
+    parser.add_argument("-jinan",       action="store_true",     default=0)
     
-    parser.add_argument("-newyork2", action="store_true",        default=1)
+    parser.add_argument("-newyork2", action="store_true",        default=0)
     return parser.parse_args()
 
 
@@ -193,7 +193,7 @@ class Testor:
 
 
     def main(self): 
-        rounds = ["round_" + str(i) for i in range(75, 80)] # (29, 30)
+        rounds = ["round_" + str(i) for i in range(0, 1)] # (29, 30)
         for old_round in rounds:
 
             self.path_to_log = os.path.join(self.dic_path["PATH_TO_WORK_DIRECTORY"], "test_round", old_round)
