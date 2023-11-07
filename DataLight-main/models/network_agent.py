@@ -35,7 +35,12 @@ class NetworkAgent(Agent):
         self.num_intersections = dic_traffic_env_conf["NUM_INTERSECTIONS"]
         self.cyclicInd2 = [0] * self.num_intersections
         
+        self.actionHisto = [[0] * self.num_actions] * self.num_intersections
+        self.maxActionTime = 4
+        
         self.k_len = dic_traffic_env_conf["K_LEN"]
+        
+        assert self.maxActionTime <= self.k_len, "maxActionTime should be less than k_len"
         
         self.q_network = self.build_network()
         self.q_network_bar = self.build_network()

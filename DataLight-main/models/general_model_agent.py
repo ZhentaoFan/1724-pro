@@ -105,6 +105,7 @@ class GeneralAgent(NetworkAgent):
         state_input = np.concatenate(state_input, axis=-1)
         q_values = self.q_network.predict([state_input, np.array(cur_phase_info)])
         action = np.argmax(q_values, axis=1)
+        # print(action)
         return action
 
     def choose_action2(self, states):
@@ -164,6 +165,55 @@ class GeneralAgent(NetworkAgent):
         
         action = self.epsilon_choice(q_values)
         return action
+    
+    def choose_action4(self, states):
+        # for cycle control
+        dic_state_feature_arrays = {}
+        cur_phase_info = []
+        used_feature = copy.deepcopy(self.dic_traffic_env_conf["LIST_STATE_FEATURE"])
+        for feature_name in used_feature:
+            dic_state_feature_arrays[feature_name] = []
+        
+        for s in states:
+            for feature_name in self.dic_traffic_env_conf["LIST_STATE_FEATURE"]:
+                if feature_name == "new_phase":
+                    cur_phase_info.append(s[feature_name])
+                else:
+                    dic_state_feature_arrays[feature_name].append(s[feature_name])
+                    
+        used_feature.remove("new_phase")
+        state_input = [np.array(dic_state_feature_arrays[feature_name]).reshape(len(states), 12, -1) for feature_name in
+                       used_feature]
+        state_input = np.concatenate(state_input, axis=-1)
+        q_values = self.q_network.predict([state_input, np.array(cur_phase_info)])
+        action = np.argmax(q_values, axis=1)
+        
+        q_values_copy = q_values.copy()
+
+        row_indices = np.arange(q_values.shape[0])
+        # Set the largest values to -infinity
+        q_values_copy[row_indices, action] = -np.inf
+
+        # Get the second largest values
+        second_arg_action = np.argmax(q_values_copy, axis=1)
+        
+        # deactivating the action that has been taken for too long
+        c_action = np.copy(action)
+        for inter_id in range(self.num_intersections):
+            
+            if(self.actionHisto[inter_id][action[inter_id]] > 0):
+                self.actionHisto[inter_id][action[inter_id]] += 1
+                if(self.actionHisto[inter_id][action[inter_id]] > self.maxActionTime):
+                    self.actionHisto[inter_id] = np.zeros(self.num_phases)
+                    self.actionHisto[inter_id][second_arg_action[inter_id]] = 1
+                    c_action[inter_id] = second_arg_action[inter_id]    
+            else:
+                # clean action histo
+                self.actionHisto[inter_id] = np.zeros(self.num_phases)
+                self.actionHisto[inter_id][action[inter_id]] = 1
+                c_action[inter_id] = action[inter_id]
+                
+        return c_action
     
     def epsilon_choice(self, q_values):
         max_1 = np.expand_dims(np.argmax(q_values, axis=-1), axis=-1)
