@@ -23,10 +23,10 @@ def parse_args():
     parser.add_argument("-memo",       type=str,               default='benchmark_1001')
     parser.add_argument("-old_memo",   type=str,               default='benchmark_1001')
     parser.add_argument("-model",       type=str,               default="General") 
-    parser.add_argument("-old_dir",    type=str,  default='anon_4_4_hangzhou_real.json_11_06_17_37_16')
+    parser.add_argument("-old_dir",    type=str,  default='cyclic_AdvCoLight_45round')
     parser.add_argument("-old_round",  type=str,                default="round_45")
 
-    parser.add_argument("-workers",     type=int,                default=3)
+    parser.add_argument("-workers",     type=int,                default=12)
     
     parser.add_argument("-hangzhou",    action="store_true",     default=1)
     parser.add_argument("-jinan",       action="store_true",     default=0)
@@ -218,7 +218,7 @@ class Testor:
             step_start_time = time.time()
 
             # action_list = self.agent.choose_action(state)
-            action_list = self.agent.choose_action4(state)
+            action_list = self.agent.choose_action5(state)
 
             next_state = self.env.step(action_list)
 

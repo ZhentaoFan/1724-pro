@@ -36,7 +36,8 @@ class NetworkAgent(Agent):
         self.cyclicInd2 = [0] * self.num_intersections
         
         self.actionHisto = [[0] * self.num_actions] * self.num_intersections
-        self.maxActionTime = 4
+        self.maxActionTime = 4 # for deactivation
+        self.waitingThreshold = 20 # for activation
         
         self.k_len = dic_traffic_env_conf["K_LEN"]
         
