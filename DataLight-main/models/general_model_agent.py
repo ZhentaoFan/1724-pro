@@ -238,7 +238,7 @@ class GeneralAgent(NetworkAgent):
         state_input = np.concatenate(state_input, axis=-1)
         q_values = self.q_network.predict([state_input, np.array(cur_phase_info)])
         action = np.argmax(q_values, axis=1)
-        
+        print(q_values)
         # activating the action that has been waiting for too long
         c_action = np.copy(action)
         
@@ -248,6 +248,46 @@ class GeneralAgent(NetworkAgent):
         for inter_id in range(self.num_intersections):
             if(np.max(self.actionHisto[inter_id]) > self.waitingThreshold):
                 c_action[inter_id] = np.argmax(self.actionHisto[inter_id])
+                self.actionHisto[inter_id][c_action[inter_id]] = 0
+            else:
+                self.actionHisto[inter_id][action[inter_id]] = 0
+        return c_action
+    
+    # Activation for side walk
+    def choose_action6(self, states):
+        # for cycle control
+        dic_state_feature_arrays = {}
+        cur_phase_info = []
+        used_feature = copy.deepcopy(self.dic_traffic_env_conf["LIST_STATE_FEATURE"])
+        for feature_name in used_feature:
+            dic_state_feature_arrays[feature_name] = []
+        
+        for s in states:
+            for feature_name in self.dic_traffic_env_conf["LIST_STATE_FEATURE"]:
+                if feature_name == "new_phase":
+                    cur_phase_info.append(s[feature_name])
+                else:
+                    dic_state_feature_arrays[feature_name].append(s[feature_name])
+                    
+        used_feature.remove("new_phase")
+        state_input = [np.array(dic_state_feature_arrays[feature_name]).reshape(len(states), 12, -1) for feature_name in
+                       used_feature]
+        state_input = np.concatenate(state_input, axis=-1)
+        q_values = self.q_network.predict([state_input, np.array(cur_phase_info)])
+        action = np.argmax(q_values, axis=1)
+        print(q_values)
+        # activating the action that has been waiting for too long
+        c_action = np.copy(action)
+        
+        # update action histo by adding 1 to all actions
+        self.actionHisto = [[e+1 for e in row] for row in self.actionHisto]
+        
+        for inter_id in range(self.num_intersections):
+            if(self.actionHisto[inter_id][1] > self.pedestrianThreshold):
+                c_action[inter_id] = 1
+                self.actionHisto[inter_id][c_action[inter_id]] = 0
+            elif (self.actionHisto[inter_id][3] > self.pedestrianThreshold):
+                c_action[inter_id] = 3
                 self.actionHisto[inter_id][c_action[inter_id]] = 0
             else:
                 self.actionHisto[inter_id][action[inter_id]] = 0

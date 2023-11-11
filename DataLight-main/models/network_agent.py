@@ -40,7 +40,8 @@ class NetworkAgent(Agent):
         
         self.actionHisto = [[0] * self.num_actions] * self.num_intersections
         self.maxActionTime = 4 # for deactivation
-        self.waitingThreshold = 15 # for activation
+        self.waitingThreshold = 20 # for activation
+        self.pedestrianThreshold = 10 # for activation
         
         self.k_len = dic_traffic_env_conf["K_LEN"]
         
