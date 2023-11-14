@@ -31,7 +31,7 @@ class NetworkAgent(Agent):
         self.num_feat = int(self.len_feat/12)
         self.min_q_weight = dic_traffic_env_conf["MIN_Q_W"]
         
-        self.kl_divergence_weight = 0.005
+        self.kl_divergence_weight = 0.001
         
         self.threshold = dic_traffic_env_conf["THRESHOLD"]
         

@@ -57,7 +57,10 @@ class GeneralAgent(NetworkAgent):
 
         # cal q-values
         phase_feature_final = Dense(1, activation="linear", name="beformerge")(hidden)
+        # print("phase_feat_final:", phase_feature_final)
         q_values = Reshape((4,))(phase_feature_final)
+        # print("q_values:", q_values)
+        
 
         network = Model(inputs=[ins0, ins1],
                         outputs=q_values)
@@ -76,6 +79,54 @@ class GeneralAgent(NetworkAgent):
         hidden = Dense(32, activation="relu")(hidden)
         hidden = Dense(32, activation="relu")(hidden)
         q_values = Dense(4, activation="linear")(hidden)
+
+        network = Model(inputs=[ins0, ins1],
+                        outputs=q_values)
+        
+        network.compile()
+        network.summary()
+        return network
+    
+    # cyclic decider by output two metaactions
+    def build_network3(self):
+        ins0 = Input(shape=(12, self.num_feat), name="input_total_features")
+        ins1 = Input(shape=(8, ), name="input_cur_phase")
+
+        #  embedding
+        # [batch, 8] -> [batch, 8, 4] -> [batch, 2, 4, 4] -> [batch, 4, 4]
+        cur_phase_emb = Activation('sigmoid')(Embedding(2, 4, input_length=8)(ins1))
+        cur_phase_emb = Reshape((2, 4, 4))(cur_phase_emb)
+        cur_phase_feat = Lambda(lambda x: K.sum(x, axis=1), name="feature_as_phase")(cur_phase_emb)
+        
+        # [batch, 12, n] -> [batch, 12, 32]
+        feat_emb = Dense(32, activation="sigmoid")(ins0)
+
+        # split according lanes
+        lane_feat_s = tf.split(feat_emb, 12, axis=1)
+
+        #  feature fusion for each phase
+        MHA1 = MultiHeadAttention(4, 32, attention_axes=1)
+        Mean1 = Lambda(lambda x: K.mean(x, axis=1, keepdims=True))
+        Sum1 = Lambda(lambda x: K.sum(x, axis=1, keepdims=True))
+        
+        phase_feats_map_2 = []
+        for i in range(self.num_phases):
+            tmp_feat_1 = tf.concat([lane_feat_s[idx] for idx in self.phase_map[i]], axis=1)
+            tmp_feat_2 = MHA1(tmp_feat_1, tmp_feat_1)
+            tmp_feat_3 = Mean1(tmp_feat_2)
+            phase_feats_map_2.append(tmp_feat_3)
+
+        # embedding
+        phase_feat_all = tf.concat(phase_feats_map_2, axis=1)
+        phase_feat_all = concatenate([phase_feat_all, cur_phase_feat])
+
+        att_encoding = MultiHeadAttention(4, 8, attention_axes=1)(phase_feat_all, phase_feat_all)
+        hidden = Dense(20, activation="relu")(att_encoding)
+        hidden = Dense(20, activation="relu")(hidden)
+
+        # cal q-values
+        phase_feature_final = Dense(2, activation="linear", name="beformerge")(hidden)
+        q_values = Reshape((2,))(phase_feature_final)
 
         network = Model(inputs=[ins0, ins1],
                         outputs=q_values)
@@ -275,7 +326,7 @@ class GeneralAgent(NetworkAgent):
         state_input = np.concatenate(state_input, axis=-1)
         q_values = self.q_network.predict([state_input, np.array(cur_phase_info)])
         action = np.argmax(q_values, axis=1)
-        print(q_values)
+        # print(q_values)
         # activating the action that has been waiting for too long
         c_action = np.copy(action)
         
@@ -332,6 +383,74 @@ class GeneralAgent(NetworkAgent):
         return [np.concatenate(_state[0], axis=-1), _state[1]], action, [np.concatenate(_next_state[0], axis=-1), _next_state[1]], my_reward
 
     def train_network(self, memory):
+        _state, _action, _next_state, _reward = self.prepare_samples(memory)
+        
+        # ==== shuffle the samples ============ 
+        percent = self.dic_traffic_env_conf["PER"]
+        np.random.seed(int(percent*100))
+        
+        random_index = np.random.permutation(len(_action))
+        _state[0] = _state[0][random_index, :, :]
+        _state[1] = _state[1][random_index, :]
+        _action = np.array(_action)[random_index]
+        _next_state[0] = _next_state[0][random_index, :, :]
+        _next_state[1] = _next_state[1][random_index, :]
+        _reward = np.array(_reward)[random_index]
+
+        epochs = self.dic_agent_conf["EPOCHS"]
+        batch_size = min(self.dic_agent_conf["BATCH_SIZE"], len(_action))
+        num_batch = int(np.floor((len(_action) / batch_size)))
+
+        loss_fn = MeanSquaredError()
+        optimizer = Adam(lr=self.dic_agent_conf["LEARNING_RATE"])
+
+        for epoch in range(epochs):
+
+            for ba in range(int(num_batch*percent)):
+                # prepare batch data
+                batch_Xs1 = [_state[0][ba*batch_size:(ba+1)*batch_size, :, :], _state[1][ba*batch_size:(ba+1)*batch_size, :]]
+                
+                batch_Xs2 = [_next_state[0][ba*batch_size:(ba+1)*batch_size, :, :], _next_state[1][ba*batch_size:(ba+1)*batch_size, :]]
+                batch_r = _reward[ba*batch_size:(ba+1)*batch_size]
+                batch_a = _action[ba*batch_size:(ba+1)*batch_size]
+
+                # forward
+                with tf.GradientTape() as tape:
+                    tape.watch(self.q_network.trainable_weights)
+                    # calcualte basic loss
+                    tmp_cur_q = self.q_network(batch_Xs1)
+                    tmp_next_q = self.q_network_bar(batch_Xs2)
+                    tmp_target = np.copy(tmp_cur_q)
+                    for i in range(batch_size):
+                        tmp_target[i, batch_a[i]] = batch_r[i] / self.dic_agent_conf["NORMAL_FACTOR"] + \
+                                                    self.dic_agent_conf["GAMMA"] * \
+                                                    np.max(tmp_next_q[i, :])
+                    base_loss = tf.reduce_mean(loss_fn(tmp_target, tmp_cur_q)) #?
+                    
+                    # tmp_loss = base_loss 
+                    # print(batch_a)
+                    # print("action 0:", len([i for i in batch_a if i == 0]))
+                    # print("action 1:", len([i for i in batch_a if i == 1]))
+                    # print("action 2:", len([i for i in batch_a if i == 2]))
+                    # print("action 3:", len([i for i in batch_a if i == 3]))
+                    
+                    # calculate CQL loss
+                    replay_action_one_hot = tf.one_hot(batch_a, 4, 1., 0., name='action_one_hot')
+                    replay_chosen_q = tf.reduce_sum(tmp_cur_q * replay_action_one_hot)
+                    dataset_expec = tf.reduce_mean(replay_chosen_q) 
+                    negative_sampling = tf.reduce_mean(tf.reduce_logsumexp(tmp_cur_q, 1))
+                    min_q_loss = (negative_sampling - dataset_expec)
+                    min_q_loss = min_q_loss * self.min_q_weight
+                    
+                    tmp_loss = base_loss  + min_q_loss
+
+                    grads = tape.gradient(tmp_loss, self.q_network.trainable_weights)
+                    optimizer.apply_gradients(zip(grads, self.q_network.trainable_weights))
+                # print("===== Epoch {} | Batch {} / {} | Loss {}".format(epoch, ba, num_batch, tmp_loss))
+
+    
+    # CQL with distribution regularizer, training this is time consuming
+    def train_network2(self, memory):
         _state, _action, _next_state, _reward = self.prepare_samples(memory)
         
         # ==== shuffle the samples ============ 
@@ -435,8 +554,73 @@ class GeneralAgent(NetworkAgent):
                 # print("===== Epoch {} | Batch {} / {} | Loss {}".format(epoch, ba, num_batch, tmp_loss))
 
 
+    def train_network3(self, memory):
+        _state, _action, _next_state, _reward = self.prepare_samples(memory)
+        
+        # ==== shuffle the samples ============ 
+        percent = self.dic_traffic_env_conf["PER"]
+        
+        # print("length action: ", len(_action))
+        # print("length state: ", len(_state[0]))
+        # print("length next state: ", len(_next_state[0]))
+        # print("length reward: ", len(_reward))
+        # print("reward: ", _reward)
+        for i in range(len(_action)):
+            if(i > 0):
+                if(np.all(_next_state[0][i-1] == _state[0][i]) and np.all(_next_state[1][i-1] == _state[1][i]) and (not self.isCyclic(_action[i-1], _action[i]))):
+                    _reward[i] -= 5
+
+        epochs = self.dic_agent_conf["EPOCHS"]
+        batch_size = min(self.dic_agent_conf["BATCH_SIZE"], len(_action))
+        num_batch = int(np.floor((len(_action) / batch_size)))
+
+        loss_fn = MeanSquaredError()
+        optimizer = Adam(lr=self.dic_agent_conf["LEARNING_RATE"])
+
+        for epoch in range(epochs):
+
+            for ba in range(int(num_batch*percent)):
+                # prepare batch data
+                batch_Xs1 = [_state[0][ba*batch_size:(ba+1)*batch_size, :, :], _state[1][ba*batch_size:(ba+1)*batch_size, :]]
+                
+                batch_Xs2 = [_next_state[0][ba*batch_size:(ba+1)*batch_size, :, :], _next_state[1][ba*batch_size:(ba+1)*batch_size, :]]
+                batch_r = _reward[ba*batch_size:(ba+1)*batch_size]
+                batch_a = _action[ba*batch_size:(ba+1)*batch_size]
+
+                # forward
+                with tf.GradientTape() as tape:
+                    tape.watch(self.q_network.trainable_weights)
+                    # calcualte basic loss
+                    tmp_cur_q = self.q_network(batch_Xs1)
+                    tmp_next_q = self.q_network_bar(batch_Xs2)
+                    tmp_target = np.copy(tmp_cur_q)
+                    for i in range(batch_size):
+                        tmp_target[i, batch_a[i]] = batch_r[i] / self.dic_agent_conf["NORMAL_FACTOR"] + \
+                                                    self.dic_agent_conf["GAMMA"] * \
+                                                    np.max(tmp_next_q[i, :])
+                    base_loss = tf.reduce_mean(loss_fn(tmp_target, tmp_cur_q)) #?
+
+                    # calculate CQL loss
+                    replay_action_one_hot = tf.one_hot(batch_a, 4, 1., 0., name='action_one_hot')
+                    replay_chosen_q = tf.reduce_sum(tmp_cur_q * replay_action_one_hot)
+                    dataset_expec = tf.reduce_mean(replay_chosen_q) 
+                    negative_sampling = tf.reduce_mean(tf.reduce_logsumexp(tmp_cur_q, 1))
+                    min_q_loss = (negative_sampling - dataset_expec)
+                    min_q_loss = min_q_loss * self.min_q_weight
+                    
+                    tmp_loss = base_loss  + min_q_loss
+
+                    grads = tape.gradient(tmp_loss, self.q_network.trainable_weights)
+                    optimizer.apply_gradients(zip(grads, self.q_network.trainable_weights))
 
 
+    def isCyclic(self, prevAction, curAction):
+        if(prevAction == curAction):
+            return True
+        elif (prevAction + 1 % self.num_phases == curAction):
+            return True
+        else:
+            return False
 
 
 
