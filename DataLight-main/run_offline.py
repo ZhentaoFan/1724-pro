@@ -36,7 +36,7 @@ def main(in_args=None):
         num_rounds = 80
         template = "Jinan"
         
-    memory = "./memory/expert_mix.pkl"
+    memory = "./memory/cycle_mix.pkl"
     NUM_COL = int(road_net.split('_')[1])
     NUM_ROW = int(road_net.split('_')[0])
     num_intersections = NUM_ROW * NUM_COL

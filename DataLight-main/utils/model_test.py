@@ -61,11 +61,13 @@ def test(model_dir, cnt_round, run_cnt, _dic_traffic_env_conf):
                     _states[i] = _states[i][-k_len:]
                 
                 for i in range(dic_traffic_env_conf["NUM_INTERSECTIONS"]):
-                    action = agents[0].choose_action5(_states[i])
+                    action = agents[0].choose_action(_states[i])
+                    print('action2')
                     action_list.append(action[0])
                 
             else:
-                action_list = agents[0].choose_action5(state)
+                action_list = agents[0].choose_action(state)
+                print('action2')
             
             next_state = env.step(action_list)
             state = next_state

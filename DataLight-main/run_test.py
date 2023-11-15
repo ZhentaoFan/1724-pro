@@ -23,8 +23,8 @@ def parse_args():
     parser.add_argument("-memo",       type=str,               default='benchmark_1001')
     parser.add_argument("-old_memo",   type=str,               default='benchmark_1001')
     parser.add_argument("-model",       type=str,               default="General") 
-    parser.add_argument("-old_dir",    type=str,  default='expert_AdvCoLight_80round')
-    parser.add_argument("-old_round",  type=str,                default="round_45")
+    parser.add_argument("-old_dir",    type=str,  default='random_AdvCoLight_80round')
+    parser.add_argument("-old_round",  type=str,                default="round_40")
 
     parser.add_argument("-workers",     type=int,                default=12)
     
@@ -193,7 +193,7 @@ class Testor:
 
 
     def main(self): 
-        rounds = ["round_" + str(i) for i in range(0, 45)] # (29, 30)
+        rounds = ["round_" + str(i) for i in range(42, 80)] # (29, 30)
         for old_round in rounds:
 
             self.path_to_log = os.path.join(self.dic_path["PATH_TO_WORK_DIRECTORY"], "test_round", old_round)
@@ -218,8 +218,8 @@ class Testor:
             step_start_time = time.time()
 
             # action_list = self.agent.choose_action(state)
-            action_list = self.agent.choose_action6(state)
-            print("action_6")
+            action_list = self.agent.choose_action(state)
+            print("action_")
 
             next_state = self.env.step(action_list)
 
