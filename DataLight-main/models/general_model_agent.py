@@ -53,10 +53,11 @@ class GeneralAgent(NetworkAgent):
 
         att_encoding = MultiHeadAttention(4, 8, attention_axes=1)(phase_feat_all, phase_feat_all)
         hidden = Dense(20, activation="relu")(att_encoding)
-        hidden = Dense(20, activation="relu")(hidden)
         
-        phase_feature_final = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 8]
-        q_values = Dense(2, activation="linear")(phase_feature_final)  # Now shape [None, 2]
+        hidden = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
+        hidden = Dense(20, activation="relu")(hidden)
+
+        q_values = Dense(2, activation="linear")(hidden)  # Now shape [None, 2]
 
         # Modify the final layer to output 2 actions (keep or change)
         # phase_feature_final = Dense(1, activation="linear", name="beformerge")(hidden)
@@ -185,6 +186,7 @@ class GeneralAgent(NetworkAgent):
                 cyclic_batch_a = []
                 # filter out the non-cyclic samples
                 for i in range(batch_size):
+                    # no need to check the conti of 
                     if self.isPhaseCyclic(batch_Xs1[1][i,:], batch_Xs2[1][i,:]):
                         cyclic_batch_a.append(1)
                         cyclic_batch_r.append(batch_r[i])
@@ -192,7 +194,7 @@ class GeneralAgent(NetworkAgent):
                         cyclic_batch_Xs1[1].append(batch_Xs1[1][i,:])
                         cyclic_batch_Xs2[0].append(batch_Xs2[0][i,:,:])
                         cyclic_batch_Xs2[1].append(batch_Xs2[1][i,:])
-                        # print('here')
+                        # print('cyclic: ', batch_r[i])
                     
                     if np.array_equal(batch_Xs1[1][i,:], batch_Xs2[1][i,:]):
                         cyclic_batch_a.append(0)
@@ -201,7 +203,7 @@ class GeneralAgent(NetworkAgent):
                         cyclic_batch_Xs1[1].append(batch_Xs1[1][i,:])
                         cyclic_batch_Xs2[0].append(batch_Xs2[0][i,:,:])
                         cyclic_batch_Xs2[1].append(batch_Xs2[1][i,:])
-                        # print('here2')
+                        # print('same: ', batch_r[i])
                         
                 if len(cyclic_batch_Xs1[0]) > 0 and len(cyclic_batch_Xs1[1]) > 0:
                     batch_Xs1 = [np.array(cyclic_batch_Xs1[0]), np.array(cyclic_batch_Xs1[1])]
