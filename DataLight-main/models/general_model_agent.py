@@ -185,21 +185,23 @@ class GeneralAgent(NetworkAgent):
                 cyclic_batch_a = []
                 # filter out the non-cyclic samples
                 for i in range(batch_size):
-                    if self.isPhaseCyclic(batch_Xs1[1][0,:], batch_Xs2[1][0,:]):
+                    if self.isPhaseCyclic(batch_Xs1[1][i,:], batch_Xs2[1][i,:]):
                         cyclic_batch_a.append(1)
                         cyclic_batch_r.append(batch_r[i])
                         cyclic_batch_Xs1[0].append(batch_Xs1[0][i,:,:])
                         cyclic_batch_Xs1[1].append(batch_Xs1[1][i,:])
                         cyclic_batch_Xs2[0].append(batch_Xs2[0][i,:,:])
                         cyclic_batch_Xs2[1].append(batch_Xs2[1][i,:])
+                        # print('here')
                     
-                    if np.array_equal(batch_Xs1[1][0,:], batch_Xs2[1][0,:]):
+                    if np.array_equal(batch_Xs1[1][i,:], batch_Xs2[1][i,:]):
                         cyclic_batch_a.append(0)
                         cyclic_batch_r.append(batch_r[i])
                         cyclic_batch_Xs1[0].append(batch_Xs1[0][i,:,:])
                         cyclic_batch_Xs1[1].append(batch_Xs1[1][i,:])
                         cyclic_batch_Xs2[0].append(batch_Xs2[0][i,:,:])
                         cyclic_batch_Xs2[1].append(batch_Xs2[1][i,:])
+                        # print('here2')
                         
                 if len(cyclic_batch_Xs1[0]) > 0 and len(cyclic_batch_Xs1[1]) > 0:
                     batch_Xs1 = [np.array(cyclic_batch_Xs1[0]), np.array(cyclic_batch_Xs1[1])]
@@ -212,27 +214,27 @@ class GeneralAgent(NetworkAgent):
                         # calcualte basic loss
                         tmp_cur_q = self.q_network(batch_Xs1)
                         tmp_next_q = self.q_network_bar(batch_Xs2)
-                        print('tmp_cur_q: ', tmp_cur_q)
-                        print('tmp_next_q: ', tmp_next_q)
+                        # print('tmp_cur_q: ', tmp_cur_q)
+                        # print('tmp_next_q: ', tmp_next_q)
                         tmp_target = np.copy(tmp_cur_q)
-                        for i in range(batch_size):
+                        for i in range(len(cyclic_batch_Xs1[0])):
                             tmp_target[i, batch_a[i]] = batch_r[i] / self.dic_agent_conf["NORMAL_FACTOR"] + \
                                                         self.dic_agent_conf["GAMMA"] * \
                                                         np.max(tmp_next_q[i, :])
                         base_loss = tf.reduce_mean(loss_fn(tmp_target, tmp_cur_q)) #?
                                         
                         # calculate CQL loss
-                        # replay_action_one_hot = tf.one_hot(batch_a, 4, 1., 0., name='action_one_hot')
-                        # replay_chosen_q = tf.reduce_sum(tmp_cur_q * replay_action_one_hot)
-                        # dataset_expec = tf.reduce_mean(replay_chosen_q) 
-                        # negative_sampling = tf.reduce_mean(tf.reduce_logsumexp(tmp_cur_q, 1))
-                        # min_q_loss = (negative_sampling - dataset_expec)
-                        # min_q_loss = min_q_loss * self.min_q_weight
+                        replay_action_one_hot = tf.one_hot(batch_a, 2, 1., 0., name='action_one_hot')
+                        replay_chosen_q = tf.reduce_sum(tmp_cur_q * replay_action_one_hot)
+                        dataset_expec = tf.reduce_mean(replay_chosen_q) 
+                        negative_sampling = tf.reduce_mean(tf.reduce_logsumexp(tmp_cur_q, 1))
+                        min_q_loss = (negative_sampling - dataset_expec)
+                        min_q_loss = min_q_loss * self.min_q_weight
                         
-                        # print('min_q_loss: ', min_q_loss)
-                        # print('base_loss: ', base_loss)
+                        print('min_q_loss: ', min_q_loss)
+                        print('base_loss: ', base_loss)
                         
-                        tmp_loss = base_loss # + min_q_loss
+                        tmp_loss = base_loss + min_q_loss
                         
                         grads = tape.gradient(tmp_loss, self.q_network.trainable_weights)
                         optimizer.apply_gradients(zip(grads, self.q_network.trainable_weights))
