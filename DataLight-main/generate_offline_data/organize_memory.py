@@ -73,7 +73,7 @@ def collect_one_flow_data(path0, flow_path='JN', flow_path2='1', index=0):
         for inter_id in range(total_inters):
             sample_path = "total_samples_inter_{0}.pkl".format(inter_id)
 
-            tmp_full_path = os.path.join(path0, 'records/benchmark_1001/', 'anon_4_4_hangzhou_real.json_11_15_15_51_52/', 'train_round/', sample_path)
+            tmp_full_path = os.path.join(path0, 'records/benchmark_1001/', 'anon_4_4_hangzhou_real.json_11_15_16_12_37/', 'train_round/', sample_path)
 
             tmp_sample_set = read_one_data(tmp_full_path)
             total_samples.extend(tmp_sample_set)
@@ -132,9 +132,9 @@ if __name__ == '__main__':
     # data3 = collect_one_flow_data("./", index=0, flow_path2=3)
     # save_final_data(data3, "./expert_jn_3.pkl")
     data4 = collect_one_flow_data("./", index=1, flow_path="HZ", flow_path2=1)
-    save_final_data(data4, "./random_hz_1.pkl")
-    data5 = collect_one_flow_data("./", index=1, flow_path="HZ", flow_path2=1)
-    save_final_data(data5, "./random_hz_2.pkl")
+    save_final_data(data4, "./random_hz_100_round.pkl")
+    # data5 = collect_one_flow_data("./", index=1, flow_path="HZ", flow_path2=1)
+    # save_final_data(data5, "./random_hz_2.pkl")
     # collect them together
 
     # data_6 = mix_data()
