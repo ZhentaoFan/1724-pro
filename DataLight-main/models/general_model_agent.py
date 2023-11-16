@@ -54,10 +54,17 @@ class GeneralAgent(NetworkAgent):
         att_encoding = MultiHeadAttention(4, 8, attention_axes=1)(phase_feat_all, phase_feat_all)
         hidden = Dense(20, activation="relu")(att_encoding)
         
-        hidden = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
-        hidden = Dense(20, activation="relu")(hidden)
+        # hidden = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
+        # hidden = Dense(20, activation="relu")(hidden)
 
-        q_values = Dense(2, activation="linear")(hidden)  # Now shape [None, 2]
+        # q_values = Dense(2, activation="linear")(hidden)  # Now shape [None, 2]
+
+        hidden = Dense(20, activation="relu")(hidden)
+        hidden_flat = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
+        phase_flat = Flatten()(ins1)
+        combined_features = concatenate([hidden_flat, phase_flat]) # shape [None, 88]
+        combined_features = Dense(20, activation="relu")(combined_features)
+        q_values = Dense(2, activation="linear")(combined_features)  # Now shape [None, 2]
 
         # Modify the final layer to output 2 actions (keep or change)
         # phase_feature_final = Dense(1, activation="linear", name="beformerge")(hidden)
