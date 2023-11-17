@@ -51,8 +51,8 @@ class GeneralAgent(NetworkAgent):
         phase_feat_all = tf.concat(phase_feats_map_2, axis=1)
         phase_feat_all = concatenate([phase_feat_all, cur_phase_feat])
 
-        att_encoding = MultiHeadAttention(4, 8, attention_axes=1)(phase_feat_all, phase_feat_all)
-        hidden = Dense(20, activation="relu")(att_encoding)
+        att_encoding = MultiHeadAttention(4, 32, attention_axes=1)(phase_feat_all, phase_feat_all)
+        hidden = Dense(40, activation="relu")(att_encoding)
         
         # hidden = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
         # hidden = Dense(20, activation="relu")(hidden)
@@ -61,10 +61,11 @@ class GeneralAgent(NetworkAgent):
 
         hidden = Dense(20, activation="relu")(hidden)
         hidden_flat = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
-        phase_flat = Flatten()(ins1)
-        combined_features = concatenate([hidden_flat, phase_flat]) # shape [None, 88]
-        combined_features = Dense(20, activation="relu")(combined_features)
-        q_values = Dense(2, activation="linear")(combined_features)  # Now shape [None, 2]
+        # phase_flat = Flatten()(ins1)
+        # combined_features = concatenate([hidden_flat, phase_flat]) # shape [None, 88]
+        # combined_features = Dense(20, activation="relu")(combined_features)
+        q_values = Dense(2, activation="linear")(hidden_flat)  # Now shape [None, 2]
+
 
         # Modify the final layer to output 2 actions (keep or change)
         # phase_feature_final = Dense(1, activation="linear", name="beformerge")(hidden)
@@ -125,6 +126,40 @@ class GeneralAgent(NetworkAgent):
 
         self.last_actions = new_actions  # Update the last actions
         return new_actions    
+
+    def choose_action2(self, states):
+        # for cycle control
+        dic_state_feature_arrays = {}
+        cur_phase_info = []
+        used_feature = copy.deepcopy(self.dic_traffic_env_conf["LIST_STATE_FEATURE"])
+        for feature_name in used_feature:
+            dic_state_feature_arrays[feature_name] = []
+        
+        for s in states:
+            for feature_name in self.dic_traffic_env_conf["LIST_STATE_FEATURE"]:
+                if feature_name == "new_phase":
+                    cur_phase_info.append(s[feature_name])
+                else:
+                    dic_state_feature_arrays[feature_name].append(s[feature_name])
+                    
+        used_feature.remove("new_phase")
+        state_input = [np.array(dic_state_feature_arrays[feature_name]).reshape(len(states), 12, -1) for feature_name in
+                       used_feature]
+        state_input = np.concatenate(state_input, axis=-1)
+        q_values = self.q_network.predict([state_input, np.array(cur_phase_info)])
+        action = np.argmax(q_values, axis=1)
+        
+        # based on 
+        c_action = np.copy(action)
+        for inter_id in range(self.num_intersections):
+            
+            if action[inter_id] == self.cyclicInd2[inter_id]:
+                pass
+            else:
+                self.cyclicInd2[inter_id] = (self.cyclicInd2[inter_id] + 1) % self.num_phases
+                c_action[inter_id] = self.cyclicInd2[inter_id]
+            
+        return c_action 
 
     def prepare_samples(self, memory):
         """

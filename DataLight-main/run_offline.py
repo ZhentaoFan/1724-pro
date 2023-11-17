@@ -25,8 +25,7 @@ def main(in_args=None):
     if in_args.hangzhou:
         count = 3600
         road_net = "4_4"
-        traffic_file_list = ["anon_4_4_hangzhou_real.json",
-                             "anon_4_4_hangzhou_real_5816.json"]
+        traffic_file_list = ["anon_4_4_hangzhou_real.json"]
         num_rounds = 80
         template = "Hangzhou"
     elif in_args.jinan:
@@ -36,7 +35,7 @@ def main(in_args=None):
         num_rounds = 80
         template = "Jinan"
         
-    memory = "./memory/cycle_mix.pkl"
+    memory = "./memory/random_hz_100_round.pkl"
     NUM_COL = int(road_net.split('_')[1])
     NUM_ROW = int(road_net.split('_')[0])
     num_intersections = NUM_ROW * NUM_COL

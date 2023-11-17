@@ -40,7 +40,7 @@ def main(args):
     if args.hangzhou:
         count = 3600
         road_net = "4_4"
-        traffic_file_list = ["anon_4_4_hangzhou_real.json",  "anon_4_4_hangzhou_real_5816.json"]
+        traffic_file_list = ["anon_4_4_hangzhou_real.json"]
         num_rounds = 1
         template = "Hangzhou"
     elif args.jinan:
@@ -193,7 +193,7 @@ class Testor:
 
 
     def main(self): 
-        rounds = ["round_" + str(i) for i in range(42, 80)] # (29, 30)
+        rounds = ["round_" + str(i) for i in range(0, 80)] # (29, 30)
         for old_round in rounds:
 
             self.path_to_log = os.path.join(self.dic_path["PATH_TO_WORK_DIRECTORY"], "test_round", old_round)
@@ -218,8 +218,8 @@ class Testor:
             step_start_time = time.time()
 
             # action_list = self.agent.choose_action(state)
-            action_list = self.agent.choose_action(state)
-            print("action_")
+            action_list = self.agent.choose_action2(state)
+            print("action_2")
 
             next_state = self.env.step(action_list)
 
