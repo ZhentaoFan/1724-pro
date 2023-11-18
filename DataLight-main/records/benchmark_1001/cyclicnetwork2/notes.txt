@@ -1,0 +1,49 @@
+    def build_network(self):
+        ins0 = Input(shape=(12, self.num_feat), name="input_total_features")
+        ins1 = Input(shape=(8, ), name="input_cur_phase")
+
+        #  embedding
+        # [batch, 8] -> [batch, 8, 4] -> [batch, 2, 4, 4] -> [batch, 4, 4]
+        cur_phase_emb = Activation('sigmoid')(Embedding(2, 4, input_length=8)(ins1))
+        cur_phase_emb = Reshape((2, 4, 4))(cur_phase_emb)
+        cur_phase_feat = Lambda(lambda x: K.sum(x, axis=1), name="feature_as_phase")(cur_phase_emb)
+        
+        # [batch, 12, n] -> [batch, 12, 32]
+        feat_emb = Dense(32, activation="sigmoid")(ins0)
+
+        # split according lanes
+        lane_feat_s = tf.split(feat_emb, 12, axis=1)
+
+        #  feature fusion for each phase
+        MHA1 = MultiHeadAttention(4, 32, attention_axes=1)
+        Mean1 = Lambda(lambda x: K.mean(x, axis=1, keepdims=True))
+        Sum1 = Lambda(lambda x: K.sum(x, axis=1, keepdims=True))
+        
+        phase_feats_map_2 = []
+        for i in range(self.num_phases):
+            tmp_feat_1 = tf.concat([lane_feat_s[idx] for idx in self.phase_map[i]], axis=1)
+            tmp_feat_2 = MHA1(tmp_feat_1, tmp_feat_1)
+            tmp_feat_3 = Mean1(tmp_feat_2)
+            phase_feats_map_2.append(tmp_feat_3)
+
+        # embedding
+        phase_feat_all = tf.concat(phase_feats_map_2, axis=1)
+        phase_feat_all = concatenate([phase_feat_all, cur_phase_feat])
+
+        att_encoding = MultiHeadAttention(4, 32, attention_axes=1)(phase_feat_all, phase_feat_all)
+        hidden = Dense(40, activation="relu")(att_encoding)
+        
+        # hidden = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
+        # hidden = Dense(20, activation="relu")(hidden)
+
+        # q_values = Dense(2, activation="linear")(hidden)  # Now shape [None, 2]
+
+        hidden = Dense(20, activation="relu")(hidden)
+        hidden_flat = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
+        # phase_flat = Flatten()(ins1)
+        # combined_features = concatenate([hidden_flat, phase_flat]) # shape [None, 88]
+        # combined_features = Dense(20, activation="relu")(combined_features)
+        q_values = Dense(2, activation="linear")(hidden_flat)  # Now shape [None, 2]
+
+"LEARNING_RATE": 0.0002,
+"MIN_Q_W": 0.0005

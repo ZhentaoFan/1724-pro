@@ -43,7 +43,7 @@ def main(in_args=None):
     for traffic_file in traffic_file_list:
         dic_traffic_env_conf_extra = {
             "PER": 1,  # 数据比例
-            "MIN_Q_W": 0.0005,  # 0.00001,  # 0.001
+            "MIN_Q_W": 0.0001, # 0.0005,  # 0.00001,  # 0.001
             "NUM_ROUNDS": num_rounds,
             "NUM_GENERATORS": in_args.gen,
             "NUM_AGENTS": 1,

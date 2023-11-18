@@ -1,0 +1,9 @@
+random_mix.pkl
+cyclic network changed version
+      att_encoding = MultiHeadAttention(4, 8, attention_axes=1)(phase_feat_all, phase_feat_all)
+        hidden = Dense(20, activation="relu")(att_encoding)
+        
+        hidden = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
+        hidden = Dense(20, activation="relu")(hidden) [none, 20]
+
+        q_values = Dense(2, activation="linear")(hidden)  # Now shape [None, 2]
