@@ -9,7 +9,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-memo",       type=str,           default='benchmark_1001')
-    parser.add_argument("-mod",        type=str,           default="General")
+    parser.add_argument("-mod",        type=str,           default="CoLight")
     parser.add_argument("-eightphase",  action="store_true", default=False)
     parser.add_argument("-gen",        type=int,            default=1)
     parser.add_argument("-multi_process", action="store_true", default=True)
@@ -25,8 +25,7 @@ def main(in_args=None):
     if in_args.hangzhou:
         count = 3600
         road_net = "4_4"
-        traffic_file_list = ["anon_4_4_hangzhou_real.json",
-                             "anon_4_4_hangzhou_real_5816.json"]
+        traffic_file_list = ["anon_4_4_hangzhou_real.json"]
         num_rounds = 80
         template = "Hangzhou"
     elif in_args.jinan:
@@ -35,8 +34,8 @@ def main(in_args=None):
         traffic_file_list = ["anon_3_4_jinan_real.json" , "anon_3_4_jinan_real_2000.json", "anon_3_4_jinan_real_2500.json"]
         num_rounds = 80
         template = "Jinan"
-        
-    memory = "./memory/cycle_mix.pkl"
+
+    memory = "./memory/random_hz_100_round_for_colight.pkl"
     NUM_COL = int(road_net.split('_')[1])
     NUM_ROW = int(road_net.split('_')[0])
     num_intersections = NUM_ROW * NUM_COL
@@ -59,16 +58,19 @@ def main(in_args=None):
             "ROADNET_FILE": "roadnet_{0}.json".format(road_net),
             "TRAFFIC_SEPARATE": traffic_file,
             "LIST_STATE_FEATURE": [
-                "new_phase",
+                # general
+                # "new_phase",
+                # "lane_num_vehicle_in",
+                # "lane_run_in_part",
+                # "num_in_seg",
                 
-                "lane_num_vehicle_in",
-#                 "lane_num_vehicle_out",
-#                 "lane_queue_vehicle_in",
-#                 "lane_queue_vehicle_out",
-#                 "traffic_movement_pressure_queue_efficient",
+                # colight
+                "new_phase", 
+                "traffic_movement_pressure_queue_efficient",
                 "lane_run_in_part",
-#                 "lane_queue_in_part",
-                "num_in_seg",
+                "adjacency_matrix",
+                
+                
             ],
 
             "DIC_REWARD_INFO": {

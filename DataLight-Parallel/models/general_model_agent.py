@@ -51,13 +51,25 @@ class GeneralAgent(NetworkAgent):
         phase_feat_all = tf.concat(phase_feats_map_2, axis=1)
         phase_feat_all = concatenate([phase_feat_all, cur_phase_feat])
 
-        att_encoding = MultiHeadAttention(4, 8, attention_axes=1)(phase_feat_all, phase_feat_all)
-        hidden = Dense(20, activation="relu")(att_encoding)
-        hidden = Dense(20, activation="relu")(hidden)
+        att_encoding = MultiHeadAttention(10, 32, attention_axes=1)(phase_feat_all, phase_feat_all)
+        hidden = Dense(40, activation="relu")(att_encoding)
+        
+        # hidden = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
+        # hidden = Dense(20, activation="relu")(hidden)
 
-        # cal q-values
-        phase_feature_final = Dense(1, activation="linear", name="beformerge")(hidden)
-        q_values = Reshape((4,))(phase_feature_final)
+        # q_values = Dense(2, activation="linear")(hidden)  # Now shape [None, 2]
+
+        hidden = Dense(20, activation="relu")(hidden)
+        hidden_flat = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
+        # phase_flat = Flatten()(ins1)
+        # combined_features = concatenate([hidden_flat, phase_flat]) # shape [None, 88]
+        # combined_features = Dense(20, activation="relu")(combined_features)
+        q_values = Dense(2, activation="linear")(hidden_flat)  # Now shape [None, 2]
+
+
+        # Modify the final layer to output 2 actions (keep or change)
+        # phase_feature_final = Dense(1, activation="linear", name="beformerge")(hidden)
+        # q_values = Reshape((4,))(phase_feature_final)
 
         network = Model(inputs=[ins0, ins1],
                         outputs=q_values)
@@ -104,9 +116,16 @@ class GeneralAgent(NetworkAgent):
                        used_feature]
         state_input = np.concatenate(state_input, axis=-1)
         q_values = self.q_network.predict([state_input, np.array(cur_phase_info)])
-        action = np.argmax(q_values, axis=1)
-        # print(action)
-        return action
+        new_actions = []
+        for inter_id in range(self.num_intersections):
+            if q_values[inter_id][0] > q_values[inter_id][1]:  # If 'keep' action has higher Q-value
+                new_actions.append(self.last_actions[inter_id])  # Keep the same action
+            else:
+                # Change to the next cyclic action
+                new_actions.append((self.last_actions[inter_id] + 1) % self.num_phases)
+
+        self.last_actions = new_actions  # Update the last actions
+        return new_actions    
 
     def choose_action2(self, states):
         # for cycle control
@@ -141,88 +160,6 @@ class GeneralAgent(NetworkAgent):
                 c_action[inter_id] = self.cyclicInd2[inter_id]
             
         return c_action 
-    
-    def choose_action3(self, states):
-        dic_state_feature_arrays = {}
-        cur_phase_info = []
-        used_feature = copy.deepcopy(self.dic_traffic_env_conf["LIST_STATE_FEATURE"])
-        # print(used_feature)
-        for feature_name in used_feature:
-            dic_state_feature_arrays[feature_name] = []
-        
-        for s in states:
-            for feature_name in self.dic_traffic_env_conf["LIST_STATE_FEATURE"]:
-                if feature_name == "new_phase":
-                    cur_phase_info.append(s[feature_name])
-                else:
-                    dic_state_feature_arrays[feature_name].append(s[feature_name])
-                    
-        used_feature.remove("new_phase")
-        state_input = [np.array(dic_state_feature_arrays[feature_name]).reshape(len(states), 12, -1) for feature_name in
-                       used_feature]
-        state_input = np.concatenate(state_input, axis=-1)
-        q_values = self.q_network.predict([state_input, np.array(cur_phase_info)])
-        
-        action = self.epsilon_choice(q_values)
-        return action
-    
-    def choose_action4(self, states):
-        # for cycle control
-        dic_state_feature_arrays = {}
-        cur_phase_info = []
-        used_feature = copy.deepcopy(self.dic_traffic_env_conf["LIST_STATE_FEATURE"])
-        for feature_name in used_feature:
-            dic_state_feature_arrays[feature_name] = []
-        
-        for s in states:
-            for feature_name in self.dic_traffic_env_conf["LIST_STATE_FEATURE"]:
-                if feature_name == "new_phase":
-                    cur_phase_info.append(s[feature_name])
-                else:
-                    dic_state_feature_arrays[feature_name].append(s[feature_name])
-                    
-        used_feature.remove("new_phase")
-        state_input = [np.array(dic_state_feature_arrays[feature_name]).reshape(len(states), 12, -1) for feature_name in
-                       used_feature]
-        state_input = np.concatenate(state_input, axis=-1)
-        q_values = self.q_network.predict([state_input, np.array(cur_phase_info)])
-        action = np.argmax(q_values, axis=1)
-        
-        q_values_copy = q_values.copy()
-
-        row_indices = np.arange(q_values.shape[0])
-        # Set the largest values to -infinity
-        q_values_copy[row_indices, action] = -np.inf
-
-        # Get the second largest values
-        second_arg_action = np.argmax(q_values_copy, axis=1)
-        
-        # deactivating the action that has been taken for too long
-        c_action = np.copy(action)
-        for inter_id in range(self.num_intersections):
-            
-            if(self.actionHisto[inter_id][action[inter_id]] > 0):
-                self.actionHisto[inter_id][action[inter_id]] += 1
-                if(self.actionHisto[inter_id][action[inter_id]] > self.maxActionTime):
-                    self.actionHisto[inter_id] = np.zeros(self.num_phases)
-                    self.actionHisto[inter_id][second_arg_action[inter_id]] = 1
-                    c_action[inter_id] = second_arg_action[inter_id]    
-            else:
-                # clean action histo
-                self.actionHisto[inter_id] = np.zeros(self.num_phases)
-                self.actionHisto[inter_id][action[inter_id]] = 1
-                c_action[inter_id] = action[inter_id]
-                
-        return c_action
-    
-    def epsilon_choice(self, q_values):
-        max_1 = np.expand_dims(np.argmax(q_values, axis=-1), axis=-1)
-        rand_1 = np.random.randint(4, size=(len(q_values), 1))
-        _p = np.concatenate([max_1, rand_1], axis=-1)
-        select = np.random.choice([0, 1], size=len(q_values), p=[1 - self.dic_agent_conf["EPSILON"],
-                                                                 self.dic_agent_conf["EPSILON"]])
-        act = _p[np.arange(len(q_values)), select]
-        return act
 
     def prepare_samples(self, memory):
         """
@@ -253,12 +190,13 @@ class GeneralAgent(NetworkAgent):
         
         return [np.concatenate(_state[0], axis=-1), _state[1]], action, [np.concatenate(_next_state[0], axis=-1), _next_state[1]], my_reward
 
+
     def train_network(self, memory):
         _state, _action, _next_state, _reward = self.prepare_samples(memory)
         
         # ==== shuffle the samples ============ 
         percent = self.dic_traffic_env_conf["PER"]
-        np.random.seed(int(percent*100))
+        # np.random.seed(int(percent*100))
         
         random_index = np.random.permutation(len(_action))
         _state[0] = _state[0][random_index, :, :]
@@ -279,50 +217,93 @@ class GeneralAgent(NetworkAgent):
 
             for ba in range(int(num_batch*percent)):
                 # prepare batch data
-                batch_Xs1 = [_state[0][ba*batch_size:(ba+1)*batch_size, :, :], _state[1][ba*batch_size:(ba+1)*batch_size, :]]
-                
+                batch_Xs1 = [_state[0][ba*batch_size:(ba+1)*batch_size, :, :], _state[1][ba*batch_size:(ba+1)*batch_size, :]]   
                 batch_Xs2 = [_next_state[0][ba*batch_size:(ba+1)*batch_size, :, :], _next_state[1][ba*batch_size:(ba+1)*batch_size, :]]
                 batch_r = _reward[ba*batch_size:(ba+1)*batch_size]
                 batch_a = _action[ba*batch_size:(ba+1)*batch_size]
 
-                # forward
-                with tf.GradientTape() as tape:
-                    tape.watch(self.q_network.trainable_weights)
-                    # calcualte basic loss
-                    tmp_cur_q = self.q_network(batch_Xs1)
-                    tmp_next_q = self.q_network_bar(batch_Xs2)
-                    tmp_target = np.copy(tmp_cur_q)
-                    for i in range(batch_size):
-                        tmp_target[i, batch_a[i]] = batch_r[i] / self.dic_agent_conf["NORMAL_FACTOR"] + \
-                                                    self.dic_agent_conf["GAMMA"] * \
-                                                    np.max(tmp_next_q[i, :])
-                    base_loss = tf.reduce_mean(loss_fn(tmp_target, tmp_cur_q)) #?
+                cyclic_batch_Xs1 = [[],[]]
+                cyclic_batch_Xs2 = [[],[]]
+                cyclic_batch_r = []
+                cyclic_batch_a = []
+                # filter out the non-cyclic samples
+                for i in range(batch_size):
+                    # no need to check the conti of 
+                    if self.isPhaseCyclic(batch_Xs1[1][i,:], batch_Xs2[1][i,:]):
+                        cyclic_batch_a.append(1)
+                        cyclic_batch_r.append(batch_r[i])
+                        cyclic_batch_Xs1[0].append(batch_Xs1[0][i,:,:])
+                        cyclic_batch_Xs1[1].append(batch_Xs1[1][i,:])
+                        cyclic_batch_Xs2[0].append(batch_Xs2[0][i,:,:])
+                        cyclic_batch_Xs2[1].append(batch_Xs2[1][i,:])
+                        # print('cyclic: ', batch_r[i])
                     
-                    # tmp_loss = base_loss 
+                    if np.array_equal(batch_Xs1[1][i,:], batch_Xs2[1][i,:]):
+                        cyclic_batch_a.append(0)
+                        cyclic_batch_r.append(batch_r[i])
+                        cyclic_batch_Xs1[0].append(batch_Xs1[0][i,:,:])
+                        cyclic_batch_Xs1[1].append(batch_Xs1[1][i,:])
+                        cyclic_batch_Xs2[0].append(batch_Xs2[0][i,:,:])
+                        cyclic_batch_Xs2[1].append(batch_Xs2[1][i,:])
+                        # print('same: ', batch_r[i])
+                        
+                if len(cyclic_batch_Xs1[0]) > 0 and len(cyclic_batch_Xs1[1]) > 0:
+                    batch_Xs1 = [np.array(cyclic_batch_Xs1[0]), np.array(cyclic_batch_Xs1[1])]
+                    batch_Xs2 = [np.array(cyclic_batch_Xs2[0]), np.array(cyclic_batch_Xs2[1])]
+                    batch_r = np.array(cyclic_batch_r)
+                    batch_a = np.array(cyclic_batch_a)
+                    # forward
+                    with tf.GradientTape() as tape:
+                        tape.watch(self.q_network.trainable_weights)
+                        # calcualte basic loss
+                        tmp_cur_q = self.q_network(batch_Xs1)
+                        tmp_next_q = self.q_network_bar(batch_Xs2)
+                        # print('tmp_cur_q: ', tmp_cur_q)
+                        # print('tmp_next_q: ', tmp_next_q)
+                        tmp_target = np.copy(tmp_cur_q)
+                        for i in range(len(cyclic_batch_Xs1[0])):
+                            tmp_target[i, batch_a[i]] = batch_r[i] / self.dic_agent_conf["NORMAL_FACTOR"] + \
+                                                        self.dic_agent_conf["GAMMA"] * \
+                                                        np.max(tmp_next_q[i, :])
+                        base_loss = tf.reduce_mean(loss_fn(tmp_target, tmp_cur_q)) #?
+                                        
+                        # calculate CQL loss
+                        replay_action_one_hot = tf.one_hot(batch_a, 2, 1., 0., name='action_one_hot')
+                        replay_chosen_q = tf.reduce_sum(tmp_cur_q * replay_action_one_hot)
+                        dataset_expec = tf.reduce_mean(replay_chosen_q) 
+                        negative_sampling = tf.reduce_mean(tf.reduce_logsumexp(tmp_cur_q, 1))
+                        min_q_loss = (negative_sampling - dataset_expec)
+                        min_q_loss = min_q_loss * self.min_q_weight
+                        
+                        print('min_q_loss: ', min_q_loss)
+                        print('base_loss: ', base_loss)
+                        
+                        tmp_loss = base_loss + min_q_loss
+                        
+                        grads = tape.gradient(tmp_loss, self.q_network.trainable_weights)
+                        optimizer.apply_gradients(zip(grads, self.q_network.trainable_weights))
                     
-                    # calculate CQL loss
-                    replay_action_one_hot = tf.one_hot(batch_a, 4, 1., 0., name='action_one_hot')
-                    replay_chosen_q = tf.reduce_sum(tmp_cur_q * replay_action_one_hot)
-                    dataset_expec = tf.reduce_mean(replay_chosen_q) 
-                    negative_sampling = tf.reduce_mean(tf.reduce_logsumexp(tmp_cur_q, 1))
-                    min_q_loss = (negative_sampling - dataset_expec)
-                    min_q_loss = min_q_loss * self.min_q_weight
                     
-                    tmp_loss = base_loss  + min_q_loss
-                    
-                    grads = tape.gradient(tmp_loss, self.q_network.trainable_weights)
-                    optimizer.apply_gradients(zip(grads, self.q_network.trainable_weights))
-                # print("===== Epoch {} | Batch {} / {} | Loss {}".format(epoch, ba, num_batch, tmp_loss))
+    def isCyclic(self, prevAction, curAction):
+        if prevAction == curAction:
+            return True
+        elif (prevAction + 1) % self.num_phases == curAction:
+            return True
+        else:
+            return False
+        
 
-
-
-
-
-
-
-
-
-
-
-
-
+    def isPhaseCyclic(self, prevPhase, curPhase):
+        phase1 = np.asarray([0, 1, 0, 1, 0, 0, 0, 0])
+        phase2 = np.asarray([0, 0, 0, 0, 0, 1, 0, 1])
+        phase3 = np.asarray([1, 0, 1, 0, 0, 0, 0, 0])
+        phase4 = np.asarray([0, 0, 0, 0, 1, 0, 1, 0])
+        if (np.array_equal(prevPhase, phase1) and np.array_equal(curPhase, phase2)) or \
+              (np.array_equal(prevPhase, phase2) and np.array_equal(curPhase, phase3)) or \
+                (np.array_equal(prevPhase, phase3) and np.array_equal(curPhase, phase4)) or \
+                    (np.array_equal(prevPhase, phase4) and np.array_equal(curPhase, phase1)):
+            return True
+        else:
+            return False
+            
+        

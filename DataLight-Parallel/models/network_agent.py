@@ -30,14 +30,19 @@ class NetworkAgent(Agent):
         self.len_feat = self.cal_input_len()
         self.num_feat = int(self.len_feat/12)
         self.min_q_weight = dic_traffic_env_conf["MIN_Q_W"]
+        
+        self.kl_divergence_weight = 0.001
+        
         self.threshold = dic_traffic_env_conf["THRESHOLD"]
         
         self.num_intersections = dic_traffic_env_conf["NUM_INTERSECTIONS"]
         self.cyclicInd2 = [0] * self.num_intersections
         
         self.actionHisto = [[0] * self.num_actions] * self.num_intersections
-        self.maxActionTime = 4
-        
+        self.maxActionTime = 4 # for deactivation
+        self.waitingThreshold = 20 # for activation
+        self.pedestrianThreshold = 10 # for activation
+        self.last_actions = [0] * self.num_intersections
         self.k_len = dic_traffic_env_conf["K_LEN"]
         
         assert self.maxActionTime <= self.k_len, "maxActionTime should be less than k_len"

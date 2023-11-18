@@ -50,7 +50,7 @@ def test(model_dir, cnt_round, run_cnt, _dic_traffic_env_conf):
         k_len = dic_traffic_env_conf["K_LEN"]
         total_time = dic_traffic_env_conf["RUN_COUNTS"]
         state = env.reset()
-       #  print(state)
+        # print(state)
         # testing_start_time = time.time()
         while step_num < int(total_time / dic_traffic_env_conf["MIN_ACTION_TIME"]):
             
