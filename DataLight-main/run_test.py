@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument("-memo",       type=str,               default='benchmark_1001')
     parser.add_argument("-old_memo",   type=str,               default='benchmark_1001')
     parser.add_argument("-model",       type=str,               default="General") 
-    parser.add_argument("-old_dir",    type=str,  default='random_AdvCoLight_80round')
+    parser.add_argument("-old_dir",    type=str,  default='cyclic_AdvCoLight_80round_5816')
     parser.add_argument("-old_round",  type=str,                default="round_40")
 
     parser.add_argument("-workers",     type=int,                default=12)
@@ -40,7 +40,7 @@ def main(args):
     if args.hangzhou:
         count = 3600
         road_net = "4_4"
-        traffic_file_list = ["anon_4_4_hangzhou_real.json"]
+        traffic_file_list = ["anon_4_4_hangzhou_real_5816.json"]
         num_rounds = 1
         template = "Hangzhou"
     elif args.jinan:

@@ -24,19 +24,19 @@ class GeneralAgent(NetworkAgent):
         ins1 = Input(shape=(8, ), name="input_cur_phase")
 
         #  embedding
-        # [batch, 8] -> [batch, 8, 4] -> [batch, 2, 4, 4] -> [batch, 4, 4]
-        cur_phase_emb = Activation('sigmoid')(Embedding(2, 4, input_length=8)(ins1))
-        cur_phase_emb = Reshape((2, 4, 4))(cur_phase_emb)
+        # [batch, 8] -> [batch, 8, 8] -> [batch, 2, 4, 8] -> [batch, 4, 8]
+        cur_phase_emb = Activation('sigmoid')(Embedding(2, 8, input_length=8)(ins1))
+        cur_phase_emb = Reshape((2, 4, 8))(cur_phase_emb)
         cur_phase_feat = Lambda(lambda x: K.sum(x, axis=1), name="feature_as_phase")(cur_phase_emb)
         
-        # [batch, 12, n] -> [batch, 12, 32]
-        feat_emb = Dense(32, activation="sigmoid")(ins0)
+        # [batch, 12, n] -> [batch, 12, 64]
+        feat_emb = Dense(64, activation="sigmoid")(ins0)
 
         # split according lanes
         lane_feat_s = tf.split(feat_emb, 12, axis=1)
 
         #  feature fusion for each phase
-        MHA1 = MultiHeadAttention(4, 32, attention_axes=1)
+        MHA1 = MultiHeadAttention(8, 64, attention_axes=1)
         Mean1 = Lambda(lambda x: K.mean(x, axis=1, keepdims=True))
         Sum1 = Lambda(lambda x: K.sum(x, axis=1, keepdims=True))
         
@@ -51,15 +51,15 @@ class GeneralAgent(NetworkAgent):
         phase_feat_all = tf.concat(phase_feats_map_2, axis=1)
         phase_feat_all = concatenate([phase_feat_all, cur_phase_feat])
 
-        att_encoding = MultiHeadAttention(4, 32, attention_axes=1)(phase_feat_all, phase_feat_all)
-        hidden = Dense(40, activation="relu")(att_encoding)
+        att_encoding = MultiHeadAttention(8, 64, attention_axes=1)(phase_feat_all, phase_feat_all)
+        hidden = Dense(64, activation="relu")(att_encoding)
         
         # hidden = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
         # hidden = Dense(20, activation="relu")(hidden)
 
         # q_values = Dense(2, activation="linear")(hidden)  # Now shape [None, 2]
 
-        hidden = Dense(20, activation="relu")(hidden)
+        hidden = Dense(32, activation="relu")(hidden)
         hidden_flat = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
         # phase_flat = Flatten()(ins1)
         # combined_features = concatenate([hidden_flat, phase_flat]) # shape [None, 88]
@@ -198,13 +198,16 @@ class GeneralAgent(NetworkAgent):
         percent = self.dic_traffic_env_conf["PER"]
         # np.random.seed(int(percent*100))
         
-        random_index = np.random.permutation(len(_action))
-        _state[0] = _state[0][random_index, :, :]
-        _state[1] = _state[1][random_index, :]
-        _action = np.array(_action)[random_index]
-        _next_state[0] = _next_state[0][random_index, :, :]
-        _next_state[1] = _next_state[1][random_index, :]
-        _reward = np.array(_reward)[random_index]
+        # random_index = np.random.permutation(len(_action))
+        # _state[0] = _state[0][random_index, :, :]
+        # _state[1] = _state[1][random_index, :]
+        # _action = np.array(_action)[random_index]
+        # _next_state[0] = _next_state[0][random_index, :, :]
+        # _next_state[1] = _next_state[1][random_index, :]
+        # _reward = np.array(_reward)[random_index]
+
+        _reward = np.array(_reward)
+        _action = np.array(_action)
 
         epochs = self.dic_agent_conf["EPOCHS"]
         batch_size = min(self.dic_agent_conf["BATCH_SIZE"], len(_action))
