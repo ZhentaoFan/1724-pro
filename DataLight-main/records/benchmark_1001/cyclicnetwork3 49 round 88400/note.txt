@@ -1,0 +1,115 @@
+
+    def build_network(self):
+        ins0 = Input(shape=(12, self.num_feat), name="input_total_features")
+        ins1 = Input(shape=(8, ), name="input_cur_phase")
+
+        #  embedding
+        # [batch, 8] -> [batch, 8, 4] -> [batch, 2, 4, 4] -> [batch, 4, 4]
+        cur_phase_emb = Activation('sigmoid')(Embedding(2, 4, input_length=8)(ins1))
+        cur_phase_emb = Reshape((2, 4, 4))(cur_phase_emb)
+        cur_phase_feat = Lambda(lambda x: K.sum(x, axis=1), name="feature_as_phase")(cur_phase_emb)
+        
+        # [batch, 12, n] -> [batch, 12, 32]
+        feat_emb = Dense(32, activation="sigmoid")(ins0)
+
+        # split according lanes
+        lane_feat_s = tf.split(feat_emb, 12, axis=1)
+
+        #  feature fusion for each phase
+        MHA1 = MultiHeadAttention(4, 32, attention_axes=1)
+        Mean1 = Lambda(lambda x: K.mean(x, axis=1, keepdims=True))
+        Sum1 = Lambda(lambda x: K.sum(x, axis=1, keepdims=True))
+        
+        phase_feats_map_2 = []
+        for i in range(self.num_phases):
+            tmp_feat_1 = tf.concat([lane_feat_s[idx] for idx in self.phase_map[i]], axis=1)
+            tmp_feat_2 = MHA1(tmp_feat_1, tmp_feat_1)
+            tmp_feat_3 = Mean1(tmp_feat_2)
+            phase_feats_map_2.append(tmp_feat_3)
+
+        # embedding
+        phase_feat_all = tf.concat(phase_feats_map_2, axis=1)
+        phase_feat_all = concatenate([phase_feat_all, cur_phase_feat])
+
+        att_encoding = MultiHeadAttention(4, 32, attention_axes=1)(phase_feat_all, phase_feat_all)
+        hidden = Dense(64, activation="relu")(att_encoding)
+        
+        # hidden = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
+        # hidden = Dense(20, activation="relu")(hidden)
+
+        # q_values = Dense(2, activation="linear")(hidden)  # Now shape [None, 2]
+
+        hidden = Dense(32, activation="relu")(hidden)
+        hidden_flat = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
+        # phase_flat = Flatten()(ins1)
+        # combined_features = concatenate([hidden_flat, phase_flat]) # shape [None, 88]
+        # combined_features = Dense(20, activation="relu")(combined_features)
+        q_values = Dense(2, activation="linear")(hidden_flat)  # Now shape [None, 2]
+
+
+        # Modify the final layer to output 2 actions (keep or change)
+        # phase_feature_final = Dense(1, activation="linear", name="beformerge")(hidden)
+        # q_values = Reshape((4,))(phase_feature_final)
+
+        network = Model(inputs=[ins0, ins1],
+                        outputs=q_values)
+        
+        network.compile()
+        network.summary()
+        return network
+       
+       
+"LEARNING_RATE": 0.0002,
+"MIN_Q_W": 0.0005,
+
+
+Total sum of all differences for round 0: 968372.0
+Total sum of all differences for round 1: 906723.0
+Total sum of all differences for round 2: 905549.0
+Total sum of all differences for round 3: 902659.0
+Total sum of all differences for round 4: 902478.0
+Total sum of all differences for round 5: 899051.0
+Total sum of all differences for round 6: 899688.0
+Total sum of all differences for round 7: 895307.0
+Total sum of all differences for round 8: 903563.0
+Total sum of all differences for round 9: 898494.0
+Total sum of all differences for round 10: 891801.0
+Total sum of all differences for round 11: 890771.0
+Total sum of all differences for round 12: 891296.0
+Total sum of all differences for round 13: 891057.0
+Total sum of all differences for round 14: 893127.0
+Total sum of all differences for round 15: 894419.0
+Total sum of all differences for round 16: 893512.0
+Total sum of all differences for round 17: 900146.0
+Total sum of all differences for round 18: 894228.0
+Total sum of all differences for round 19: 892513.0
+Total sum of all differences for round 20: 892228.0
+Total sum of all differences for round 21: 892966.0
+Total sum of all differences for round 22: 889707.0
+Total sum of all differences for round 23: 897223.0
+Total sum of all differences for round 24: 895309.0
+Total sum of all differences for round 25: 889847.0
+Total sum of all differences for round 26: 893141.0
+Total sum of all differences for round 27: 892798.0
+Total sum of all differences for round 28: 894291.0
+Total sum of all differences for round 29: 893679.0
+Total sum of all differences for round 30: 894217.0
+Total sum of all differences for round 31: 897667.0
+Total sum of all differences for round 32: 895391.0
+Total sum of all differences for round 33: 894502.0
+Total sum of all differences for round 34: 884873.0
+Total sum of all differences for round 35: 894784.0
+Total sum of all differences for round 36: 894070.0
+Total sum of all differences for round 37: 896952.0
+Total sum of all differences for round 38: 892295.0
+Total sum of all differences for round 39: 894435.0
+Total sum of all differences for round 40: 889671.0
+Total sum of all differences for round 41: 896977.0
+Total sum of all differences for round 42: 893606.0
+Total sum of all differences for round 43: 894207.0
+Total sum of all differences for round 44: 891386.0
+Total sum of all differences for round 45: 888431.0
+Total sum of all differences for round 46: 899764.0
+Total sum of all differences for round 47: 892790.0
+Total sum of all differences for round 48: 895070.0
+Total sum of all differences for round 49: 891324.0

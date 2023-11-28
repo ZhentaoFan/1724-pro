@@ -1,8 +1,9 @@
 from models.general_model_agent import GeneralAgent
-
+from models.colight_agent import CoLightAgent
 
 DIC_AGENTS = {
     "General": GeneralAgent,
+    "CoLight": CoLightAgent,
 }
 
 DIC_PATH = {
@@ -14,7 +15,7 @@ DIC_PATH = {
 }
 
 dic_traffic_env_conf = {
-    "MIN_Q_W": 0.0005,
+    "MIN_Q_W": 0.0005, # 0.0005,
     "THRESHOLD": 0.3,
     
     "LIST_MODEL": ["General"],
@@ -82,7 +83,7 @@ dic_traffic_env_conf = {
 
 DIC_BASE_AGENT_CONF = {
     "D_DENSE": 20,
-    "LEARNING_RATE": 0.001,
+    "LEARNING_RATE": 0.0002,
     "PATIENCE": 10,
     "BATCH_SIZE": 100,
     "EPOCHS": 2,

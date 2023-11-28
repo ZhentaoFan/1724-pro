@@ -243,8 +243,6 @@ class CoLightAgent(Agent):
 
 
 
-
-
     def adjacency_index2matrix(self,adjacency_index):
         #adjacency_index(the nearest K neighbors):[1,2,3]
         """

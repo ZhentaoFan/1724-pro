@@ -7,7 +7,7 @@ for j in range(80):
 
     # Sum of all the differences
     total_sum = 0
-
+    total_nan = 0
     # Loop over the files in the directory
     for i in range(16):  # Assuming you have files for intersections 0 to 15
         file_name = f'vehicle_inter_{i}.csv'
@@ -21,9 +21,12 @@ for j in range(80):
             # Calculate the sum of the differences for this file
             sum_difference = (vehicle_data['leave_time'] - vehicle_data['enter_time']).sum()
             total_sum += sum_difference
+            total_nan += len(vehicle_data['leave_time'] == 'nan')
+
             # print(f'Sum for {file_name}: {sum_difference}')
         # else:
         #     print(f'File {file_path} does not exist.')
 
     # Print the total sum
     print(f'Total sum of all differences for round {j}: {total_sum}')
+    print(total_nan)

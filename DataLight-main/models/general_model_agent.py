@@ -52,14 +52,14 @@ class GeneralAgent(NetworkAgent):
         phase_feat_all = concatenate([phase_feat_all, cur_phase_feat])
 
         att_encoding = MultiHeadAttention(4, 32, attention_axes=1)(phase_feat_all, phase_feat_all)
-        hidden = Dense(40, activation="relu")(att_encoding)
+        hidden = Dense(64, activation="relu")(att_encoding)
         
         # hidden = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
         # hidden = Dense(20, activation="relu")(hidden)
 
         # q_values = Dense(2, activation="linear")(hidden)  # Now shape [None, 2]
 
-        hidden = Dense(20, activation="relu")(hidden)
+        hidden = Dense(32, activation="relu")(hidden)
         hidden_flat = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
         # phase_flat = Flatten()(ins1)
         # combined_features = concatenate([hidden_flat, phase_flat]) # shape [None, 88]
@@ -87,7 +87,8 @@ class GeneralAgent(NetworkAgent):
         hidden = Dense(64, activation="relu")(phase_feat_all)
         hidden = Dense(32, activation="relu")(hidden)
         hidden = Dense(32, activation="relu")(hidden)
-        q_values = Dense(4, activation="linear")(hidden)
+        hidden = Flatten()(hidden) 
+        q_values = Dense(2, activation="linear")(hidden)
 
         network = Model(inputs=[ins0, ins1],
                         outputs=q_values)
