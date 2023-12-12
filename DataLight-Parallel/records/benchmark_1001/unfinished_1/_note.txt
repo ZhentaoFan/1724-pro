@@ -1,6 +1,0 @@
-kl loss 
-expert dataset
-//self.kl_divergence_weight = self.min_q_weight 0.0005
-self.kl_divergence_weight = 0.005
-choose_action5()
-self.waitingThreshold = 20 # for activation
