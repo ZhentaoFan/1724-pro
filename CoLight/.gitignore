@@ -1,8 +1,0 @@
-.idea/*
-records/*
-__pycache__/*
-console.txt
-model/*
-temp.tensorboard/*
-errors/*
-baseline/__pycache__/*

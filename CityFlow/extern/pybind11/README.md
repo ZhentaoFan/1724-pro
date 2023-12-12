@@ -1,1 +1,0 @@
-This is a repo of pybind11 v2.3.0 with minimum files required. Please see https://github.com/pybind/pybind11 for the original project.

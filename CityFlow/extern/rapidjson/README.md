@@ -1,1 +1,0 @@
-This is a repo of RapidJSON@d87b698 with minimum files required. Please see https://github.com/Tencent/rapidjson for the original project.

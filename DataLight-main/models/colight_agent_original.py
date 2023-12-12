@@ -21,14 +21,14 @@ class CoLightAgent(Agent):
                  intersection_id="0"):
         super(CoLightAgent, self).__init__(
             dic_agent_conf, dic_traffic_env_conf, dic_path, intersection_id)
-        self.CNN_layers =  [[32, 32]]
+        self.CNN_layers = dic_agent_conf['CNN_layers']
         self.num_agents = dic_traffic_env_conf['NUM_INTERSECTIONS']
         self.num_neighbors = min(dic_traffic_env_conf['TOP_K_ADJACENCY'], self.num_agents)
 
         self.num_actions = len(self.dic_traffic_env_conf["PHASE"])
         self.len_feature = self._cal_len_feature()
         self.memory = build_memory()
-        self.last_actions = [0] * self.num_agents
+
         if cnt_round == 0:
             # initialization
             self.q_network = self.build_network()
@@ -185,22 +185,12 @@ class CoLightAgent(Agent):
         """
         xs = self.convert_state_to_input(states)
         q_values = self.q_network(xs)
-        # TODO: translate from cyclic to normal
-        # if random.random() <= self.dic_agent_conf["EPSILON"]:
-        #     action = np.random.randint(self.num_actions, size=len(q_values[0]))
-        # else:
-        action = np.argmax(q_values[0], axis=1)
-        new_actions = []
-        for inter_id in range(self.num_agents):
-            if action[inter_id] == 0:  # If 'keep' action has higher Q-value
-                new_actions.append(self.last_actions[inter_id])  # Keep the same action
-            else:
-                # Change to the next cyclic action
-                new_actions.append((self.last_actions[inter_id] + 1) % self.num_actions)
-
-        self.last_actions = new_actions  # Update the last actions
-        
-        return new_actions
+        # TODO: change random pattern
+        if random.random() <= self.dic_agent_conf["EPSILON"]:
+            action = np.random.randint(self.num_actions, size=len(q_values[0]))
+        else:
+            action = np.argmax(q_values[0], axis=1)
+        return action
 
     @staticmethod
     def _concat_list(ls):
@@ -214,7 +204,6 @@ class CoLightAgent(Agent):
         memory: [slice_data, slice_data, ..., slice_data]
         prepare memory for training
         """
-        # ToDo: clean data
         slice_size = len(memory[0])
         _adjs = []
         # state : [feat1, feat2]
@@ -225,29 +214,17 @@ class CoLightAgent(Agent):
         _reward = [[] for _ in range(self.num_agents)]
 
         used_feature = self.dic_traffic_env_conf["LIST_STATE_FEATURE"][:-1]
-        # print(len(memory))
+
         for i in range(slice_size):
             _adj = []
             for j in range(self.num_agents):
                 state, action, next_state, reward, _ = memory[j][i]
-                # ToDo: clean data
-                # print(state["new_phase"])
-                # print(next_state["new_phase"])
-                if self.isPhaseCyclic(np.array(state["new_phase"]),np.array(next_state["new_phase"])):
-                    _action[j].append(1)
-                    _reward[j].append(reward)
-                    _adj.append(state["adjacency_matrix"])
-                    print('cyclic')
-                    _state[j].append(self._concat_list([state[used_feature[i]] for i in range(len(used_feature))]))
-                    _next_state[j].append(self._concat_list([next_state[used_feature[i]] for i in range(len(used_feature))]))
-                elif np.array_equal(np.array(state["new_phase"]), np.array(next_state["new_phase"])):
-                    _action[j].append(0)
-                    _reward[j].append(reward)
-                    _adj.append(state["adjacency_matrix"])
-                    print('keep')
-                    _state[j].append(self._concat_list([state[used_feature[i]] for i in range(len(used_feature))]))
-                    _next_state[j].append(self._concat_list([next_state[used_feature[i]] for i in range(len(used_feature))]))
-                
+                _action[j].append(action)
+                _reward[j].append(reward)
+                _adj.append(state["adjacency_matrix"])
+                # TODO
+                _state[j].append(self._concat_list([state[used_feature[i]] for i in range(len(used_feature))]))
+                _next_state[j].append(self._concat_list([next_state[used_feature[i]] for i in range(len(used_feature))]))
             _adjs.append(_adj)
         # [batch, agent, nei, agent]
         _adjs2 = self.adjacency_index2matrix(np.array(_adjs))
@@ -304,7 +281,7 @@ class CoLightAgent(Agent):
                 )
         # action prediction layer
         # [batch,agent,32]->[batch,agent,action]
-        out = Dense(2, kernel_initializer='random_normal', name='action_layer')(h)
+        out = Dense(self.num_actions, kernel_initializer='random_normal', name='action_layer')(h)
         # out:[batch,agent,action], att:[batch,layers,agent,head,neighbors]
         model = Model(inputs=In, outputs=out)
 
@@ -313,8 +290,7 @@ class CoLightAgent(Agent):
         model.summary()
         return model
 
-    def train_network(self, memory):
-        self.prepare_Xs_Y(memory)
+    def train_network(self):
         epochs = self.dic_agent_conf["EPOCHS"]
         batch_size = min(self.dic_agent_conf["BATCH_SIZE"], len(self.Y))
 
@@ -357,18 +333,6 @@ class CoLightAgent(Agent):
     def save_network_bar(self, file_name):
         self.q_network_bar.save(os.path.join(self.dic_path["PATH_TO_MODEL"], "%s.h5" % file_name))
 
-    def isPhaseCyclic(self, prevPhase, curPhase):
-        phase1 = np.asarray([0, 1, 0, 1, 0, 0, 0, 0])
-        phase2 = np.asarray([0, 0, 0, 0, 0, 1, 0, 1])
-        phase3 = np.asarray([1, 0, 1, 0, 0, 0, 0, 0])
-        phase4 = np.asarray([0, 0, 0, 0, 1, 0, 1, 0])
-        if (np.array_equal(prevPhase, phase1) and np.array_equal(curPhase, phase2)) or \
-                (np.array_equal(prevPhase, phase2) and np.array_equal(curPhase, phase3)) or \
-                (np.array_equal(prevPhase, phase3) and np.array_equal(curPhase, phase4)) or \
-                    (np.array_equal(prevPhase, phase4) and np.array_equal(curPhase, phase1)):
-            return True
-        else:
-            return False
 
 class RepeatVector3D(Layer):
     def __init__(self, times, **kwargs):
@@ -387,4 +351,3 @@ class RepeatVector3D(Layer):
         config = {'times': self.times}
         base_config = super(RepeatVector3D, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
-
