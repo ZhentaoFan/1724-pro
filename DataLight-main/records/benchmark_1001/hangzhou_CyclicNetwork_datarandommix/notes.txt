@@ -1,2 +1,0 @@
-random_mix.pkl
-cyclic network native version

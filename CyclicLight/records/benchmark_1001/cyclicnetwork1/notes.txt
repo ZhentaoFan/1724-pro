@@ -1,0 +1,124 @@
+
+    def build_network(self):
+        ins0 = Input(shape=(12, self.num_feat), name="input_total_features")
+        ins1 = Input(shape=(8, ), name="input_cur_phase")
+
+        #  embedding
+        # [batch, 8] -> [batch, 8, 4] -> [batch, 2, 4, 4] -> [batch, 4, 4]
+        cur_phase_emb = Activation('sigmoid')(Embedding(2, 4, input_length=8)(ins1))
+        cur_phase_emb = Reshape((2, 4, 4))(cur_phase_emb)
+        cur_phase_feat = Lambda(lambda x: K.sum(x, axis=1), name="feature_as_phase")(cur_phase_emb)
+        
+        # [batch, 12, n] -> [batch, 12, 32]
+        feat_emb = Dense(32, activation="sigmoid")(ins0)
+
+        # split according lanes
+        lane_feat_s = tf.split(feat_emb, 12, axis=1)
+
+        #  feature fusion for each phase
+        MHA1 = MultiHeadAttention(4, 32, attention_axes=1)
+        Mean1 = Lambda(lambda x: K.mean(x, axis=1, keepdims=True))
+        Sum1 = Lambda(lambda x: K.sum(x, axis=1, keepdims=True))
+        
+        phase_feats_map_2 = []
+        for i in range(self.num_phases):
+            tmp_feat_1 = tf.concat([lane_feat_s[idx] for idx in self.phase_map[i]], axis=1)
+            tmp_feat_2 = MHA1(tmp_feat_1, tmp_feat_1)
+            tmp_feat_3 = Mean1(tmp_feat_2)
+            phase_feats_map_2.append(tmp_feat_3)
+
+        # embedding
+        phase_feat_all = tf.concat(phase_feats_map_2, axis=1)
+        phase_feat_all = concatenate([phase_feat_all, cur_phase_feat])
+
+        att_encoding = MultiHeadAttention(4, 8, attention_axes=1)(phase_feat_all, phase_feat_all)
+        hidden = Dense(20, activation="relu")(att_encoding)
+        hidden = Dense(20, activation="relu")(hidden)
+        hidden_flat = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
+        phase_flat = Flatten()(ins1)
+        combined_features = concatenate([hidden_flat, phase_flat]) # shape [None, 88]
+        q_values = Dense(2, activation="linear")(combined_features)  # Now shape [None, 2]
+
+random 100 round dataset
+
+
+Total sum of all differences for round 0: 366066.0
+Total sum of all differences for round 1: 1437497.0
+Total sum of all differences for round 2: 1141883.0
+Total sum of all differences for round 3: 1288279.0
+Total sum of all differences for round 4: 1091601.0
+Total sum of all differences for round 5: 1140594.0
+Total sum of all differences for round 6: 943844.0
+Total sum of all differences for round 7: 970643.0
+Total sum of all differences for round 8: 896357.0
+Total sum of all differences for round 9: 943295.0
+Total sum of all differences for round 10: 946740.0
+Total sum of all differences for round 11: 907038.0
+Total sum of all differences for round 12: 907260.0
+Total sum of all differences for round 13: 900662.0
+Total sum of all differences for round 14: 903935.0
+Total sum of all differences for round 15: 898321.0
+Total sum of all differences for round 16: 910694.0
+Total sum of all differences for round 17: 900078.0
+Total sum of all differences for round 18: 895931.0
+Total sum of all differences for round 19: 909332.0
+Total sum of all differences for round 20: 902527.0
+Total sum of all differences for round 21: 898034.0
+Total sum of all differences for round 22: 900362.0
+Total sum of all differences for round 23: 896367.0
+Total sum of all differences for round 24: 938926.0
+Total sum of all differences for round 25: 893980.0
+Total sum of all differences for round 26: 905039.0
+Total sum of all differences for round 27: 896264.0
+Total sum of all differences for round 28: 901382.0
+Total sum of all differences for round 29: 921853.0
+Total sum of all differences for round 30: 899420.0
+Total sum of all differences for round 31: 912082.0
+Total sum of all differences for round 32: 927427.0
+Total sum of all differences for round 33: 898044.0
+Total sum of all differences for round 34: 903821.0
+Total sum of all differences for round 35: 901849.0
+Total sum of all differences for round 36: 903137.0
+Total sum of all differences for round 37: 0
+Total sum of all differences for round 38: 0
+Total sum of all differences for round 39: 0
+Total sum of all differences for round 40: 0
+Total sum of all differences for round 41: 0
+Total sum of all differences for round 42: 0
+Total sum of all differences for round 43: 0
+Total sum of all differences for round 44: 0
+Total sum of all differences for round 45: 0
+Total sum of all differences for round 46: 0
+Total sum of all differences for round 47: 0
+Total sum of all differences for round 48: 0
+Total sum of all differences for round 49: 0
+Total sum of all differences for round 50: 0
+Total sum of all differences for round 51: 0
+Total sum of all differences for round 52: 0
+Total sum of all differences for round 53: 0
+Total sum of all differences for round 54: 0
+Total sum of all differences for round 55: 0
+Total sum of all differences for round 56: 0
+Total sum of all differences for round 57: 0
+Total sum of all differences for round 58: 0
+Total sum of all differences for round 59: 0
+Total sum of all differences for round 60: 0
+Total sum of all differences for round 61: 0
+Total sum of all differences for round 62: 0
+Total sum of all differences for round 63: 0
+Total sum of all differences for round 64: 0
+Total sum of all differences for round 65: 0
+Total sum of all differences for round 66: 0
+Total sum of all differences for round 67: 0
+Total sum of all differences for round 68: 0
+Total sum of all differences for round 69: 0
+Total sum of all differences for round 70: 0
+Total sum of all differences for round 71: 0
+Total sum of all differences for round 72: 0
+Total sum of all differences for round 73: 0
+Total sum of all differences for round 74: 0
+Total sum of all differences for round 75: 0
+Total sum of all differences for round 76: 0
+Total sum of all differences for round 77: 0
+Total sum of all differences for round 78: 0
+Total sum of all differences for round 79: 0
