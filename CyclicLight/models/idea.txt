@@ -1,1 +1,0 @@
-re-propagate the Q value after the original offline training.

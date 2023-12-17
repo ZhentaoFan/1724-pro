@@ -53,24 +53,9 @@ class GeneralAgent(NetworkAgent):
 
         att_encoding = MultiHeadAttention(4, 32, attention_axes=1)(phase_feat_all, phase_feat_all)
         hidden = Dense(64, activation="relu")(att_encoding)
-        
-        # hidden = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
-        # hidden = Dense(20, activation="relu")(hidden)
-
-        # q_values = Dense(2, activation="linear")(hidden)  # Now shape [None, 2]
-
         hidden = Dense(32, activation="relu")(hidden)
         hidden_flat = Flatten()(hidden)  # hidden is the output from the previous layer, now shape [None, 80]
-        # phase_flat = Flatten()(ins1)
-        # combined_features = concatenate([hidden_flat, phase_flat]) # shape [None, 88]
-        # combined_features = Dense(20, activation="relu")(combined_features)
         q_values = Dense(2, activation="linear")(hidden_flat)  # Now shape [None, 2]
-
-
-        # Modify the final layer to output 2 actions (keep or change)
-        # phase_feature_final = Dense(1, activation="linear", name="beformerge")(hidden)
-        # q_values = Reshape((4,))(phase_feature_final)
-
         network = Model(inputs=[ins0, ins1],
                         outputs=q_values)
         
@@ -97,6 +82,7 @@ class GeneralAgent(NetworkAgent):
         network.summary()
         return network
     
+    # CyclicLight's Action
     def choose_action(self, states):
         dic_state_feature_arrays = {}
         cur_phase_info = []
@@ -161,6 +147,135 @@ class GeneralAgent(NetworkAgent):
                 c_action[inter_id] = self.cyclicInd2[inter_id]
             
         return c_action 
+
+    # deactivation
+    def choose_action4(self, states):
+        # for cycle control
+        dic_state_feature_arrays = {}
+        cur_phase_info = []
+        used_feature = copy.deepcopy(self.dic_traffic_env_conf["LIST_STATE_FEATURE"])
+        for feature_name in used_feature:
+            dic_state_feature_arrays[feature_name] = []
+        
+        for s in states:
+            for feature_name in self.dic_traffic_env_conf["LIST_STATE_FEATURE"]:
+                if feature_name == "new_phase":
+                    cur_phase_info.append(s[feature_name])
+                else:
+                    dic_state_feature_arrays[feature_name].append(s[feature_name])
+                    
+        used_feature.remove("new_phase")
+        state_input = [np.array(dic_state_feature_arrays[feature_name]).reshape(len(states), 12, -1) for feature_name in
+                       used_feature]
+        state_input = np.concatenate(state_input, axis=-1)
+        q_values = self.q_network.predict([state_input, np.array(cur_phase_info)])
+        action = np.argmax(q_values, axis=1)
+        
+        q_values_copy = q_values.copy()
+
+        row_indices = np.arange(q_values.shape[0])
+        # Set the largest values to -infinity
+        q_values_copy[row_indices, action] = -np.inf
+
+        # Get the second largest values
+        second_arg_action = np.argmax(q_values_copy, axis=1)
+        
+        # deactivating the action that has been taken for too long
+        c_action = np.copy(action)
+        for inter_id in range(self.num_intersections):
+            
+            if(self.actionHisto[inter_id][action[inter_id]] > 0):
+                self.actionHisto[inter_id][action[inter_id]] += 1
+                if(self.actionHisto[inter_id][action[inter_id]] > self.maxActionTime):
+                    self.actionHisto[inter_id] = np.zeros(self.num_phases)
+                    self.actionHisto[inter_id][second_arg_action[inter_id]] = 1
+                    c_action[inter_id] = second_arg_action[inter_id]    
+            else:
+                # clean action histo
+                self.actionHisto[inter_id] = np.zeros(self.num_phases)
+                self.actionHisto[inter_id][action[inter_id]] = 1
+                c_action[inter_id] = action[inter_id]
+                
+        return c_action
+
+
+    # Activation
+    def choose_action5(self, states):
+        # for cycle control
+        dic_state_feature_arrays = {}
+        cur_phase_info = []
+        used_feature = copy.deepcopy(self.dic_traffic_env_conf["LIST_STATE_FEATURE"])
+        for feature_name in used_feature:
+            dic_state_feature_arrays[feature_name] = []
+        
+        for s in states:
+            for feature_name in self.dic_traffic_env_conf["LIST_STATE_FEATURE"]:
+                if feature_name == "new_phase":
+                    cur_phase_info.append(s[feature_name])
+                else:
+                    dic_state_feature_arrays[feature_name].append(s[feature_name])
+                    
+        used_feature.remove("new_phase")
+        state_input = [np.array(dic_state_feature_arrays[feature_name]).reshape(len(states), 12, -1) for feature_name in
+                       used_feature]
+        state_input = np.concatenate(state_input, axis=-1)
+        q_values = self.q_network.predict([state_input, np.array(cur_phase_info)])
+        action = np.argmax(q_values, axis=1)
+        print(q_values)
+        # activating the action that has been waiting for too long
+        c_action = np.copy(action)
+        
+        # update action histo by adding 1 to all actions
+        self.actionHisto = [[e+1 for e in row] for row in self.actionHisto]
+        
+        for inter_id in range(self.num_intersections):
+            if(np.max(self.actionHisto[inter_id]) > self.waitingThreshold):
+                c_action[inter_id] = np.argmax(self.actionHisto[inter_id])
+                self.actionHisto[inter_id][c_action[inter_id]] = 0
+            else:
+                self.actionHisto[inter_id][action[inter_id]] = 0
+        return c_action
+    
+
+    # Activation for side walk
+    def choose_action6(self, states):
+        # for cycle control
+        dic_state_feature_arrays = {}
+        cur_phase_info = []
+        used_feature = copy.deepcopy(self.dic_traffic_env_conf["LIST_STATE_FEATURE"])
+        for feature_name in used_feature:
+            dic_state_feature_arrays[feature_name] = []
+        
+        for s in states:
+            for feature_name in self.dic_traffic_env_conf["LIST_STATE_FEATURE"]:
+                if feature_name == "new_phase":
+                    cur_phase_info.append(s[feature_name])
+                else:
+                    dic_state_feature_arrays[feature_name].append(s[feature_name])
+                    
+        used_feature.remove("new_phase")
+        state_input = [np.array(dic_state_feature_arrays[feature_name]).reshape(len(states), 12, -1) for feature_name in
+                       used_feature]
+        state_input = np.concatenate(state_input, axis=-1)
+        q_values = self.q_network.predict([state_input, np.array(cur_phase_info)])
+        action = np.argmax(q_values, axis=1)
+        # print(q_values)
+        # activating the action that has been waiting for too long
+        c_action = np.copy(action)
+        
+        # update action histo by adding 1 to all actions
+        self.actionHisto = [[e+1 for e in row] for row in self.actionHisto]
+        
+        for inter_id in range(self.num_intersections):
+            if(self.actionHisto[inter_id][1] > self.pedestrianThreshold):
+                c_action[inter_id] = 1
+                self.actionHisto[inter_id][c_action[inter_id]] = 0
+            elif (self.actionHisto[inter_id][3] > self.pedestrianThreshold):
+                c_action[inter_id] = 3
+                self.actionHisto[inter_id][c_action[inter_id]] = 0
+            else:
+                self.actionHisto[inter_id][action[inter_id]] = 0
+        return c_action
 
     def prepare_samples(self, memory):
         """
@@ -227,9 +342,8 @@ class GeneralAgent(NetworkAgent):
                 cyclic_batch_Xs2 = [[],[]]
                 cyclic_batch_r = []
                 cyclic_batch_a = []
-                # filter out the non-cyclic samples
                 for i in range(batch_size):
-                    # no need to check the conti of 
+                    # cyclic action
                     if self.isPhaseCyclic(batch_Xs1[1][i,:], batch_Xs2[1][i,:]):
                         cyclic_batch_a.append(1)
                         cyclic_batch_r.append(batch_r[i])
@@ -237,8 +351,8 @@ class GeneralAgent(NetworkAgent):
                         cyclic_batch_Xs1[1].append(batch_Xs1[1][i,:])
                         cyclic_batch_Xs2[0].append(batch_Xs2[0][i,:,:])
                         cyclic_batch_Xs2[1].append(batch_Xs2[1][i,:])
-                        # print('cyclic: ', batch_r[i])
-                    
+
+                    # same action                    
                     if np.array_equal(batch_Xs1[1][i,:], batch_Xs2[1][i,:]):
                         cyclic_batch_a.append(0)
                         cyclic_batch_r.append(batch_r[i])
@@ -246,7 +360,6 @@ class GeneralAgent(NetworkAgent):
                         cyclic_batch_Xs1[1].append(batch_Xs1[1][i,:])
                         cyclic_batch_Xs2[0].append(batch_Xs2[0][i,:,:])
                         cyclic_batch_Xs2[1].append(batch_Xs2[1][i,:])
-                        # print('same: ', batch_r[i])
                         
                 if len(cyclic_batch_Xs1[0]) > 0 and len(cyclic_batch_Xs1[1]) > 0:
                     batch_Xs1 = [np.array(cyclic_batch_Xs1[0]), np.array(cyclic_batch_Xs1[1])]
@@ -259,8 +372,6 @@ class GeneralAgent(NetworkAgent):
                         # calcualte basic loss
                         tmp_cur_q = self.q_network(batch_Xs1)
                         tmp_next_q = self.q_network_bar(batch_Xs2)
-                        # print('tmp_cur_q: ', tmp_cur_q)
-                        # print('tmp_next_q: ', tmp_next_q)
                         tmp_target = np.copy(tmp_cur_q)
                         for i in range(len(cyclic_batch_Xs1[0])):
                             tmp_target[i, batch_a[i]] = batch_r[i] / self.dic_agent_conf["NORMAL_FACTOR"] + \

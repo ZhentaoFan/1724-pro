@@ -21,7 +21,7 @@ class RandomAgent(Agent):
         self.IDX = 0
         
     
-    # random agent
+    # random cyclic agent
     def choose_action(self, state):
         action = np.random.randint(2)
         if action:
