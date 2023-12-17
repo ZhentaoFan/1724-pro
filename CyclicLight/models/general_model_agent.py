@@ -1,9 +1,3 @@
-"""
-This model is based on AttendLight and AttentionLight.
-The model can adapt its input to the used features.
-
-"""
-
 from tensorflow.keras.layers import Input, Dense, Reshape,  Lambda,  Activation, Embedding, Conv2D, concatenate, add,\
     multiply, MultiHeadAttention, Flatten
 from tensorflow.keras.models import Model

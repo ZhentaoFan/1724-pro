@@ -115,6 +115,7 @@ class Pipeline:
 
             print("==============  test evaluation =============")
             test_evaluation_start_time = time.time()
+            # Test every round
             if cnt_round + 100 >= self.dic_traffic_env_conf["NUM_ROUNDS"]:
                
                 model_test.test(self.dic_path["PATH_TO_MODEL"], cnt_round,
