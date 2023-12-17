@@ -392,6 +392,44 @@ class GeneralAgent(NetworkAgent):
                         
                         tmp_loss = base_loss + min_q_loss
                         
+                        # # Assume `batch_a` is a tensor of shape (batch_size,) with integer action values
+                        # # And `num_actions` is the total number of possible actions
+                        # num_actions = 4
+                        # batch_size = tf.size(batch_a)
+
+                        # # Count the occurrence of each action to estimate the probability distribution of `batch_a`
+                        # action_counts = tf.math.bincount(batch_a, minlength=num_actions)
+                        # action_probs = action_counts / tf.reduce_sum(action_counts)
+                        # action_probs = tf.cast(action_probs, tf.float32)
+                        # # Define the prior distribution
+                        # prior_probs = tf.constant([0.25, 0.25, 0.25, 0.25])  # prior is uniform
+                        
+
+                        # # Add a small value to probabilities to prevent log(0)
+                        # epsilon = 1e-8
+                        # action_probs += epsilon
+                        # prior_probs += epsilon
+
+                        # # Normalize the probabilities to ensure they sum up to 1
+                        # action_probs /= tf.reduce_sum(action_probs)
+                        # prior_probs /= tf.reduce_sum(prior_probs)
+
+                        # # Calculate KL divergence
+                        # kl_divergence = tf.reduce_sum(action_probs * tf.math.log(action_probs / prior_probs))
+
+                        # # print("baseloss datatype: ", base_loss.dtype)
+                        # # print("min_q_loss datatype: ", min_q_loss.dtype)
+                        # # print("KL loss datatype:", kl_divergence.dtype)
+                        # # print("weighted KL loss datatype:", self.kl_divergence_weight * kl_divergence.dtype)
+                        # # Add the KL divergence as a regularizer to your loss function
+                        # tmp_loss = base_loss + min_q_loss + self.kl_divergence_weight * kl_divergence
+                        
+                        # print("baseloss: ", base_loss)
+                        # print("min_q_loss: ", min_q_loss)
+                        # print("KL loss:", kl_divergence)
+                        # print("weighted KL loss:", self.kl_divergence_weight * kl_divergence)
+                    
+
                         grads = tape.gradient(tmp_loss, self.q_network.trainable_weights)
                         optimizer.apply_gradients(zip(grads, self.q_network.trainable_weights))
                     
