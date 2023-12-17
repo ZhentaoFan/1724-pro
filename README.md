@@ -1,11 +1,13 @@
-Dependency of libraries fixed. For the original code, please refer to the repo [MPLight](https://github.com/Chacha-Chen/MPLight), [CoLight](https://github.com/wingsweihua/colight) and [CityFlow](https://github.com/cityflow-project/CityFlow)
+## Docker
 
-In CityFlow, 
+This GitHub repo replies on many dependancies(e.g. tensorflow and City-flow simulation) and here is the linux docker image that has all the required libraries setup. [Docker Image](https://drive.google.com/file/d/1XPT9Yqbk6C7-tdwdxpWnclO2htshAENP/view?usp=drive_link). Authored by Zhentao Fan.
 
-```
-pip install .
-```
+## WMCOD
+***Weighted Meta-Action Cyclical Offline Dataset**
 
-Python version that is being used is 3.10.
+The WMCOD that is being used for training CyclicLight. [Memory for Hangzhou](https://drive.google.com/file/d/1sgTzb4awXvp2NVtBB_gwaDbGvT14xYB2/view?usp=drive_link). Authored by Zhentao Fan.
 
-Then install the default version of keras and tensorflow when there is an error.
+The WMCOD for the Cyclic-CoLight is [here](https://drive.google.com/file/d/1C-3g1FY5B49xJnaC0zxGbQNkgLTQO7G_/view?usp=sharing). Authored by Zhentao Fan.
+
+## Acknoledgement
+This repo is developed based on the [DataLight](https://github.com/LiangZhang1996/DataLight).
